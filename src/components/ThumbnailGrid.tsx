@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { Button, cn } from '@covers/ui'
-import { FolderPlus, Trash2, X } from 'lucide-react'
+import { Button } from '@covers/ui'
+import { FolderPlus, X } from 'lucide-react'
 import { StoredImage } from '../lib/storage'
 import { ImageThumbnail } from './ImageThumbnail'
 
