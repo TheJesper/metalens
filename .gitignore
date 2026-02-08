@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+
+# Editor
+.vscode/
+*.swp
+*.swo
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+.eslintcache
+
+# Next.js
+next-env.d.ts
+
+# Vercel
+.vercel
+
+# Test files
+test-image.png
+
+# Internal docs
+HANDOVER-*.md
+
+# Claude
+.claude/

@@ -1,0 +1,24 @@
+services:
+  metalens:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: metalens
+    restart: unless-stopped
+    ports:
+      - "8202:80"
+    networks:
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.metalens.rule=Host(`metalens.conzeon.dev`)"
+      - "traefik.http.routers.metalens.entrypoints=websecure"
+      - "traefik.http.routers.metalens.tls=true"
+      - "traefik.http.routers.metalens.tls.certresolver=letsencrypt"
+      # Dual auth middleware - SSO OR password (configured in Traefik)
+      - "traefik.http.routers.metalens.middlewares=metalens-auth@file"
+      - "traefik.http.services.metalens.loadbalancer.server.port=80"
+
+networks:
+  traefik-network:
+    external: true

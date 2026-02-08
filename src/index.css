@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CoverKit Theme - Azure Blue */
+    --background: 222 47% 11%;         /* #0f172a slate-900 */
+    --foreground: 210 40% 93%;         /* #e2e8f0 slate-200 */
+    --card: 217 33% 17%;               /* #1e293b slate-800 */
+    --card-foreground: 210 40% 93%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 93%;
+    --primary: 207 100% 40%;           /* #007ACC Azure Blue */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 93%;
+    --muted: 217 33% 20%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 93%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 24%;
+    --input: 217 33% 17%;
+    --ring: 207 100% 40%;
+    --radius: 0.5rem;
+
+    /* Sidebar - CoverKit */
+    --sidebar-background: 220 47% 8%;
+    --sidebar-foreground: 210 40% 93%;
+    --sidebar-primary: 207 100% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 93%;
+    --sidebar-border: 215 25% 18%;
+    --sidebar-ring: 207 100% 40%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+}
