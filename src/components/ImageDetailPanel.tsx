@@ -1,14 +1,5 @@
 import { useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
-  Badge,
-  Input,
-  cn,
-} from '@covers/ui'
+import { Button, Badge, Input } from '@covers/ui'
 import {
   X,
   Copy,
@@ -20,10 +11,9 @@ import {
   Tag,
   FileText,
   Sparkles,
-  ExternalLink,
 } from 'lucide-react'
 import { StoredImage, updateImage } from '../lib/storage'
-import { AnalysisResult, VisionAdapter } from '../lib/adapters'
+import { VisionAdapter } from '../lib/adapters'
 import { TagPill, AddTagButton } from './TagPill'
 import { ImageChat } from './ImageChat'
 

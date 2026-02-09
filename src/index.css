@@ -1,8 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* CoverKit fonts */
+/* CoverKit fonts - must be first */
 @import '@fontsource/dosis/400.css';
 @import '@fontsource/dosis/600.css';
 @import '@fontsource/dosis/700.css';
@@ -10,6 +6,10 @@
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
 @import '@fontsource/jetbrains-mono/400.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {

@@ -1,4 +1,4 @@
-import { X, Search, ExternalLink } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { cn } from '@covers/ui'
 
 interface TagPillProps {

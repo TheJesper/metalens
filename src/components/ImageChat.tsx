@@ -176,7 +176,7 @@ export function ImageChat({
             className="flex-1"
           />
           <Button
-            variant="gold"
+            variant="default"
             size="icon"
             onClick={handleSend}
             disabled={!message.trim() || isLoading}

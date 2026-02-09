@@ -242,7 +242,7 @@ export function EngineSelector({
         {/* Re-analyze Button */}
         {hasResults && isConfigured && (
           <Button
-            variant="gold"
+            variant="default"
             size="sm"
             onClick={onReanalyze}
             disabled={isProcessing}
@@ -273,7 +273,7 @@ export function EngineSelector({
               className="flex-1"
             />
             <Button
-              variant="gold"
+              variant="default"
               onClick={handleSaveOllamaUrl}
               disabled={checkingOllama}
             >

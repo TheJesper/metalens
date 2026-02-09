@@ -617,7 +617,7 @@ function App() {
                           className="hidden"
                         />
                         <Button
-                          variant="gold"
+                          variant="default"
                           size="lg"
                           onClick={() => fileInputRef.current?.click()}
                           className="mb-4"
