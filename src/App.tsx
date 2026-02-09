@@ -78,19 +78,29 @@ const STORAGE_KEYS = {
   model: 'metalens_model',
 }
 
+// Safe localStorage access
+function getStoredAdapter(): AdapterType {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.adapter) as AdapterType
+    if (saved && ADAPTER_MODELS[saved]) return saved
+  } catch {}
+  return 'ollama'
+}
+
+function getStoredModel(adapterType: AdapterType): string {
+  try {
+    const savedModel = localStorage.getItem(STORAGE_KEYS.model)
+    const models = ADAPTER_MODELS[adapterType]
+    if (savedModel && models.includes(savedModel)) return savedModel
+  } catch {}
+  return ADAPTER_MODELS[adapterType][0]
+}
+
 function App() {
   const [view, setView] = useState<View>('upload')
-  // Default to ollama, restore from localStorage
-  const [adapter, setAdapter] = useState<AdapterType>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.adapter) as AdapterType
-    return saved && ADAPTER_MODELS[saved] ? saved : 'ollama'
-  })
-  const [model, setModel] = useState(() => {
-    const savedAdapter = localStorage.getItem(STORAGE_KEYS.adapter) as AdapterType || 'ollama'
-    const savedModel = localStorage.getItem(STORAGE_KEYS.model)
-    const models = ADAPTER_MODELS[savedAdapter] || ADAPTER_MODELS.ollama
-    return savedModel && models.includes(savedModel) ? savedModel : models[0]
-  })
+  const [adapter, setAdapter] = useState<AdapterType>('ollama')
+  const [model, setModel] = useState(ADAPTER_MODELS.ollama[0])
+  const [isInitialized, setIsInitialized] = useState(false)
   const [images, setImages] = useState<StoredImage[]>([])
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({})
   const [isProcessing, setIsProcessing] = useState(false)
@@ -108,8 +118,14 @@ function App() {
   // Storage usage
   const [storageUsage, setStorageUsage] = useState(getStorageUsage())
 
-  // Load images from localStorage on mount
+  // Load saved state from localStorage on mount
   useEffect(() => {
+    const storedAdapter = getStoredAdapter()
+    const storedModel = getStoredModel(storedAdapter)
+    setAdapter(storedAdapter)
+    setModel(storedModel)
+    setIsInitialized(true)
+
     const stored = getStoredImages()
     setImages(stored)
     setStorageUsage(getStorageUsage())
@@ -518,23 +534,33 @@ function App() {
                 >
                   <div className="p-12 text-center">
                     <div className="mb-4">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
-                        <Upload className="h-8 w-8 text-muted-foreground" />
+                      <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center">
+                        <Scan className="h-8 w-8 text-amber-500" />
                       </div>
                     </div>
-                    <p className="text-lg font-medium">Drop images here</p>
-                    <p className="text-sm text-muted-foreground">
-                      or click to select files
+                    <p className="text-lg font-medium">Drop images to analyze</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      or click the button below
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <Button
+                      size="lg"
+                      className="bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-lg shadow-amber-500/25 relative z-10"
+                      onClick={() => document.getElementById('file-input')?.click()}
+                      disabled={isProcessing}
+                    >
+                      <Upload className="h-5 w-5 mr-2" />
+                      Choose Files & Analyze
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-4">
                       Supports: JPG, PNG, WebP, GIF, ZIP
                     </p>
                     <input
+                      id="file-input"
                       type="file"
                       accept="image/*,.zip"
                       multiple
                       onChange={handleFileInput}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="hidden"
                       disabled={isProcessing}
                     />
                   </div>
