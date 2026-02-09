@@ -26,6 +26,12 @@
     --ring: 207 100% 40%;
     --radius: 0.5rem;
 
+    /* Gold accent - CoverKit */
+    --gold: 44 100% 73%;
+    --gold-foreground: 214 12% 10%;
+    --gold-dark: 40 89% 60%;
+    --gold-light: 48 100% 85%;
+
     /* Sidebar - CoverKit */
     --sidebar-background: 220 47% 8%;
     --sidebar-foreground: 210 40% 93%;

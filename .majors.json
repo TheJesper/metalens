@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "source": "graph TD\n  USER[User] -->|Upload| DROP[Dropzone]\n  DROP -->|Images| STORE[(LocalStorage)]\n  DROP --> SELECT{Adapter Selection}\n  SELECT -->|Mock| MOCK[MockAdapter]\n  SELECT -->|Ollama| OLLAMA[OllamaAdapter]\n  SELECT -->|OpenAI| OPENAI[OpenAIAdapter]\n  SELECT -->|Claude| CLAUDE[ClaudeAdapter]\n  SELECT -->|Google| GOOGLE[GoogleAdapter]\n  MOCK --> ANALYZE[Analyze Image]\n  OLLAMA --> ANALYZE\n  OPENAI --> ANALYZE\n  CLAUDE --> ANALYZE\n  GOOGLE --> ANALYZE\n  ANALYZE -->|Vision API| RESULT[Metadata Result]\n  RESULT -->|title, tags, description| STORE\n  RESULT --> GRID[ThumbnailGrid]\n  GRID -->|Select| DETAIL[Image Detail View]\n  GRID -->|Batch| BATCH[Create Batch]\n  BATCH --> EXPORT[/Export/]",
+  "nodes": {},
+  "edges": {},
+  "meta": {
+    "title": "MetaLens Image Analysis Flow",
+    "description": "Upload images → AI vision analysis → metadata extraction → batch export"
+  }
+}

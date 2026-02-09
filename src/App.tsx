@@ -534,8 +534,8 @@ function App() {
                 >
                   <div className="p-12 text-center">
                     <div className="mb-4">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center">
-                        <Scan className="h-8 w-8 text-amber-500" />
+                      <div className="mx-auto w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center">
+                        <Scan className="h-8 w-8 text-gold" />
                       </div>
                     </div>
                     <p className="text-lg font-medium">Drop images to analyze</p>
@@ -543,8 +543,8 @@ function App() {
                       or click the button below
                     </p>
                     <Button
+                      variant="gold"
                       size="lg"
-                      className="bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-lg shadow-amber-500/25 relative z-10"
                       onClick={() => document.getElementById('file-input')?.click()}
                       disabled={isProcessing}
                     >
