@@ -121,6 +121,7 @@ function App() {
   // Dialogs
   const [apiKeyDialogAdapter, setApiKeyDialogAdapter] = useState<AdapterType | null>(null)
   const [showCreateBatch, setShowCreateBatch] = useState(false)
+  const [adapterRefreshTrigger, setAdapterRefreshTrigger] = useState(0)
 
   // Storage usage
   const [storageUsage, setStorageUsage] = useState(getStorageUsage())
@@ -717,6 +718,7 @@ function App() {
                       onConfigureKey={setApiKeyDialogAdapter}
                       hasResults={false}
                       isProcessing={isProcessing}
+                      refreshTrigger={adapterRefreshTrigger}
                     />
                   </CardContent>
                 </Card>
@@ -832,6 +834,7 @@ function App() {
                       onConfigureKey={setApiKeyDialogAdapter}
                       hasResults={false}
                       isProcessing={false}
+                      refreshTrigger={adapterRefreshTrigger}
                     />
                   </CardContent>
                 </Card>
@@ -882,7 +885,10 @@ function App() {
         adapter={apiKeyDialogAdapter}
         open={!!apiKeyDialogAdapter}
         onOpenChange={(open) => !open && setApiKeyDialogAdapter(null)}
-        onSaved={() => setApiKeyDialogAdapter(null)}
+        onSaved={() => {
+          setApiKeyDialogAdapter(null)
+          setAdapterRefreshTrigger(prev => prev + 1)
+        }}
       />
 
       <CreateBatchDialog
