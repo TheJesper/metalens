@@ -72,10 +72,25 @@ function ExplorerButton({
   )
 }
 
+// Storage keys
+const STORAGE_KEYS = {
+  adapter: 'metalens_adapter',
+  model: 'metalens_model',
+}
+
 function App() {
   const [view, setView] = useState<View>('upload')
-  const [adapter, setAdapter] = useState<AdapterType>('mock')
-  const [model, setModel] = useState(ADAPTER_MODELS.mock[0])
+  // Default to ollama, restore from localStorage
+  const [adapter, setAdapter] = useState<AdapterType>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.adapter) as AdapterType
+    return saved && ADAPTER_MODELS[saved] ? saved : 'ollama'
+  })
+  const [model, setModel] = useState(() => {
+    const savedAdapter = localStorage.getItem(STORAGE_KEYS.adapter) as AdapterType || 'ollama'
+    const savedModel = localStorage.getItem(STORAGE_KEYS.model)
+    const models = ADAPTER_MODELS[savedAdapter] || ADAPTER_MODELS.ollama
+    return savedModel && models.includes(savedModel) ? savedModel : models[0]
+  })
   const [images, setImages] = useState<StoredImage[]>([])
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({})
   const [isProcessing, setIsProcessing] = useState(false)
@@ -102,7 +117,15 @@ function App() {
 
   const handleAdapterChange = (newAdapter: AdapterType) => {
     setAdapter(newAdapter)
-    setModel(ADAPTER_MODELS[newAdapter][0])
+    const newModel = ADAPTER_MODELS[newAdapter][0]
+    setModel(newModel)
+    localStorage.setItem(STORAGE_KEYS.adapter, newAdapter)
+    localStorage.setItem(STORAGE_KEYS.model, newModel)
+  }
+
+  const handleModelChange = (newModel: string) => {
+    setModel(newModel)
+    localStorage.setItem(STORAGE_KEYS.model, newModel)
   }
 
   const handleDrop = useCallback(
@@ -466,7 +489,7 @@ function App() {
                       adapter={adapter}
                       model={model}
                       onAdapterChange={handleAdapterChange}
-                      onModelChange={setModel}
+                      onModelChange={handleModelChange}
                       onReanalyze={handleReanalyze}
                       onConfigureKey={setApiKeyDialogAdapter}
                       hasResults={hasResults}
@@ -663,7 +686,7 @@ function App() {
                       adapter={adapter}
                       model={model}
                       onAdapterChange={handleAdapterChange}
-                      onModelChange={setModel}
+                      onModelChange={handleModelChange}
                       onConfigureKey={setApiKeyDialogAdapter}
                       hasResults={false}
                       isProcessing={false}

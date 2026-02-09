@@ -209,16 +209,15 @@ export function EngineSelector({
           )}
         </div>
 
-        {/* Re-analyze Button */}
+        {/* Re-analyze Button - Prominent amber/yellow */}
         {hasResults && isConfigured && (
           <Button
-            variant="outline"
             size="sm"
             onClick={onReanalyze}
             disabled={isProcessing}
-            className="gap-1"
+            className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-black font-medium shadow-lg shadow-amber-500/20"
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className={cn('h-4 w-4', isProcessing && 'animate-spin')} />
             Re-analyze with {ADAPTERS[adapter]}
           </Button>
         )}

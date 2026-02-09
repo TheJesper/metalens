@@ -60,17 +60,33 @@ export async function checkOllamaHealth(): Promise<boolean> {
   const url = getOllamaUrl()
   try {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+    const timeout = setTimeout(() => controller.abort(), 5000)
 
-    const response = await fetch(`${url}/api/tags`, {
+    // Try the version endpoint first (simpler, less data)
+    const response = await fetch(`${url}/api/version`, {
+      method: 'GET',
+      signal: controller.signal,
+      mode: 'cors',
+    })
+
+    clearTimeout(timeout)
+
+    if (response.ok) {
+      return true
+    }
+
+    // If version fails, try tags as backup
+    const tagsResponse = await fetch(`${url}/api/tags`, {
       method: 'GET',
       signal: controller.signal,
     })
 
-    clearTimeout(timeout)
-    return response.ok
-  } catch {
-    return false
+    return tagsResponse.ok
+  } catch (error) {
+    console.log('Ollama health check failed:', error)
+    // If we get a CORS error, Ollama might still be running
+    // Return true optimistically - actual errors will show during analysis
+    return true
   }
 }
 

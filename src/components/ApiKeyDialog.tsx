@@ -9,8 +9,9 @@ import {
   Button,
   Input,
   Label,
+  Badge,
 } from '@covers/ui'
-import { ExternalLink, Eye, EyeOff } from 'lucide-react'
+import { ExternalLink, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { AdapterType, ADAPTERS } from '../lib/adapters'
 import {
   getAdapterInfo,
@@ -20,6 +21,13 @@ import {
   getOllamaUrl,
   setOllamaUrl,
 } from '../lib/adapters/state'
+
+// API cost estimates per image
+const API_COSTS: Record<string, string> = {
+  openai: '~$0.01-0.03',
+  claude: '~$0.01-0.04',
+  google: '~$0.001-0.002',
+}
 
 interface ApiKeyDialogProps {
   adapter: AdapterType | null
@@ -38,6 +46,7 @@ export function ApiKeyDialog({
   const [showKey, setShowKey] = useState(false)
 
   const info = adapter ? getAdapterInfo(adapter) : null
+  const isPaidApi = adapter && ['openai', 'claude', 'google'].includes(adapter)
 
   useEffect(() => {
     if (open && adapter) {
@@ -132,6 +141,21 @@ export function ApiKeyDialog({
             </div>
           </div>
 
+          {isPaidApi && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-500">API Cost</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    {ADAPTERS[adapter]} costs {API_COSTS[adapter]} per image.
+                    Keys are stored in browser localStorage.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {info.helpUrl && (
             <a
               href={info.helpUrl}
@@ -152,6 +176,7 @@ export function ApiKeyDialog({
                 <li>Run: <code className="bg-secondary px-1 rounded">ollama pull llava</code></li>
                 <li>Start server: <code className="bg-secondary px-1 rounded">ollama serve</code></li>
               </ol>
+              <Badge variant="outline" className="mt-2">Free - runs locally</Badge>
             </div>
           )}
         </div>
@@ -159,7 +184,7 @@ export function ApiKeyDialog({
         <DialogFooter className="gap-2 sm:gap-0">
           {value && (
             <Button variant="ghost" onClick={handleRemove} className="text-destructive">
-              Remove
+              Clear Key
             </Button>
           )}
           <Button onClick={handleSave}>
