@@ -2,8 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CoverKit fonts */
+@import '@fontsource/dosis/400.css';
+@import '@fontsource/dosis/600.css';
+@import '@fontsource/dosis/700.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
 @layer base {
   :root {
+    /* CoverKit fonts */
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Dosis', sans-serif;
     /* CoverKit Theme - Azure Blue */
     --background: 222 47% 11%;         /* #0f172a slate-900 */
     --foreground: 210 40% 93%;         /* #e2e8f0 slate-200 */
@@ -49,8 +62,19 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Display headings use Dosis */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+  }
+
+  /* Code uses JetBrains Mono */
+  code, pre, kbd {
+    font-family: var(--font-mono);
   }
 
   ::-webkit-scrollbar {
@@ -63,5 +87,16 @@
 
   ::-webkit-scrollbar-thumb {
     @apply bg-muted rounded-full;
+  }
+}
+
+/* CoverKit utility classes */
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
   }
 }

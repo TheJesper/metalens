@@ -1,4 +1,4 @@
-import { AnalysisResult } from './adapters'
+import { AnalysisResult, ChatMessage } from './adapters'
 
 const STORAGE_KEY = 'metalens_images'
 const BATCHES_KEY = 'metalens_batches'
@@ -8,6 +8,7 @@ export interface StoredImage {
   filename: string
   thumbnail: string  // base64 data URL
   result?: AnalysisResult
+  chatHistory?: ChatMessage[]
   batchId?: string
   addedAt: string
 }

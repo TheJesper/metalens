@@ -7,15 +7,18 @@ import {
   SelectValue,
   Badge,
   Button,
+  Input,
   cn,
 } from '@covers/ui'
-import { Check, AlertCircle, Loader2, Key, RefreshCw, Server } from 'lucide-react'
+import { Check, AlertCircle, Loader2, Key, RefreshCw, Server, Globe } from 'lucide-react'
 import { ADAPTERS, ADAPTER_MODELS, AdapterType } from '../lib/adapters'
 import {
   AdapterStates,
   getAdapterStates,
   checkOllamaHealth,
   getAdapterInfo,
+  getOllamaUrl,
+  setOllamaUrl,
 } from '../lib/adapters/state'
 
 interface EngineSelectorProps {
@@ -41,6 +44,8 @@ export function EngineSelector({
 }: EngineSelectorProps) {
   const [states, setStates] = useState<AdapterStates>(getAdapterStates())
   const [checkingOllama, setCheckingOllama] = useState(false)
+  const [ollamaUrl, setOllamaUrlState] = useState(getOllamaUrl())
+  const [showOllamaConfig, setShowOllamaConfig] = useState(false)
   const models = ADAPTER_MODELS[adapter]
 
   // Check Ollama health on mount and when switching to Ollama
@@ -67,6 +72,20 @@ export function EngineSelector({
       ollama: { configured: isHealthy },
     }))
     setCheckingOllama(false)
+  }
+
+  const handleSaveOllamaUrl = async () => {
+    setOllamaUrl(ollamaUrl)
+    setCheckingOllama(true)
+    const isHealthy = await checkOllamaHealth()
+    setStates(prev => ({
+      ...prev,
+      ollama: { configured: isHealthy },
+    }))
+    setCheckingOllama(false)
+    if (isHealthy) {
+      setShowOllamaConfig(false)
+    }
   }
 
   const handleAdapterChange = (newAdapter: AdapterType) => {
@@ -175,24 +194,28 @@ export function EngineSelector({
           </Badge>
 
           {/* Configure Key Button */}
-          {!isConfigured && adapter !== 'mock' && (
+          {!isConfigured && adapter !== 'mock' && adapter !== 'ollama' && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => onConfigureKey?.(adapter)}
               className="gap-1"
             >
-              {adapter === 'ollama' ? (
-                <>
-                  <Server className="h-3 w-3" />
-                  Setup Ollama
-                </>
-              ) : (
-                <>
-                  <Key className="h-3 w-3" />
-                  Add API Key
-                </>
-              )}
+              <Key className="h-3 w-3" />
+              Add API Key
+            </Button>
+          )}
+
+          {/* Ollama URL Config Button */}
+          {adapter === 'ollama' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowOllamaConfig(!showOllamaConfig)}
+              className="gap-1"
+            >
+              <Globe className="h-3 w-3" />
+              {showOllamaConfig ? 'Hide' : 'Configure URL'}
             </Button>
           )}
 
@@ -223,6 +246,42 @@ export function EngineSelector({
           </Button>
         )}
       </div>
+
+      {/* Ollama URL Configuration Panel */}
+      {adapter === 'ollama' && showOllamaConfig && (
+        <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Server className="h-4 w-4" />
+            Ollama Server URL
+          </div>
+          <p className="text-xs text-muted-foreground">
+            For remote access, use a Cloudflare Tunnel or ngrok URL.
+            Local: <code className="px-1 py-0.5 bg-muted rounded">http://localhost:11434</code>
+          </p>
+          <div className="flex gap-2">
+            <Input
+              value={ollamaUrl}
+              onChange={(e) => setOllamaUrlState(e.target.value)}
+              placeholder="http://localhost:11434"
+              className="flex-1"
+            />
+            <Button
+              variant="gold"
+              onClick={handleSaveOllamaUrl}
+              disabled={checkingOllama}
+            >
+              {checkingOllama ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Save & Test'
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Current: <code className="px-1 py-0.5 bg-muted rounded">{getOllamaUrl()}</code>
+          </p>
+        </div>
+      )}
     </div>
   )
 }

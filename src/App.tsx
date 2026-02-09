@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Card, CardContent, Badge, Progress, Button, cn } from '@covers/ui'
 import {
   Scan,
@@ -15,12 +15,18 @@ import {
   Info,
   LucideIcon,
   PenTool,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  Eye,
+  Wand2,
 } from 'lucide-react'
-import { AdapterType, ADAPTER_MODELS, ADAPTERS, mockAdapter, ollamaAdapter } from './lib/adapters'
+import { AdapterType, ADAPTER_MODELS, ADAPTERS, mockAdapter, ollamaAdapter, openaiAdapter, claudeAdapter, googleAdapter } from './lib/adapters'
 import { EngineSelector } from './components/EngineSelector'
 import { ApiKeyDialog } from './components/ApiKeyDialog'
 import { ThumbnailGrid } from './components/ThumbnailGrid'
 import { CreateBatchDialog } from './components/CreateBatchDialog'
+import { ImageDetailPanel } from './components/ImageDetailPanel'
 import {
   StoredImage,
   getStoredImages,
@@ -35,7 +41,7 @@ import {
 } from './lib/storage'
 
 type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | 'error'>
-type View = 'upload' | 'library' | 'batches' | 'draw' | 'settings'
+type View = 'analyze' | 'library' | 'batches' | 'sketch' | 'settings'
 
 // Helper component for explorer sidebar buttons
 function ExplorerButton({
@@ -97,15 +103,16 @@ function getStoredModel(adapterType: AdapterType): string {
 }
 
 function App() {
-  const [view, setView] = useState<View>('upload')
-  const [adapter, setAdapter] = useState<AdapterType>('ollama')
-  const [model, setModel] = useState(ADAPTER_MODELS.ollama[0])
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [view, setView] = useState<View>('analyze')
+  // Initialize directly from localStorage to avoid flash of wrong values
+  const [adapter, setAdapter] = useState<AdapterType>(() => getStoredAdapter())
+  const [model, setModel] = useState(() => getStoredModel(getStoredAdapter()))
   const [images, setImages] = useState<StoredImage[]>([])
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({})
   const [isProcessing, setIsProcessing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null)
+  const [processingError, setProcessingError] = useState<string | null>(null)
 
   // Selection mode for batching
   const [selectionMode, setSelectionMode] = useState(false)
@@ -118,14 +125,14 @@ function App() {
   // Storage usage
   const [storageUsage, setStorageUsage] = useState(getStorageUsage())
 
-  // Load saved state from localStorage on mount
-  useEffect(() => {
-    const storedAdapter = getStoredAdapter()
-    const storedModel = getStoredModel(storedAdapter)
-    setAdapter(storedAdapter)
-    setModel(storedModel)
-    setIsInitialized(true)
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Processing stats
+  const [processingStats, setProcessingStats] = useState({ current: 0, total: 0 })
+
+  // Load images from localStorage on mount
+  useEffect(() => {
     const stored = getStoredImages()
     setImages(stored)
     setStorageUsage(getStorageUsage())
@@ -144,12 +151,21 @@ function App() {
     localStorage.setItem(STORAGE_KEYS.model, newModel)
   }
 
+  // Supported image extensions (case-insensitive)
+  const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.heic', '.heif', '.avif', '.svg']
+
+  const isImageFile = (file: File): boolean => {
+    if (file.type.startsWith('image/')) return true
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
+    return IMAGE_EXTENSIONS.includes(ext)
+  }
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       setIsDragging(false)
       const files = Array.from(e.dataTransfer.files).filter(
-        (f) => f.type.startsWith('image/') || f.name.endsWith('.zip')
+        (f) => isImageFile(f) || f.name.toLowerCase().endsWith('.zip')
       )
       if (files.length > 0) processImages(files)
     },
@@ -158,7 +174,9 @@ function App() {
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || [])
+      const files = Array.from(e.target.files || []).filter(
+        (f) => isImageFile(f) || f.name.toLowerCase().endsWith('.zip')
+      )
       if (files.length > 0) processImages(files)
       e.target.value = ''
     },
@@ -168,6 +186,12 @@ function App() {
   // Get the current adapter based on selection
   const getAdapter = () => {
     switch (adapter) {
+      case 'openai':
+        return openaiAdapter
+      case 'claude':
+        return claudeAdapter
+      case 'google':
+        return googleAdapter
       case 'ollama':
         return ollamaAdapter
       default:
@@ -177,7 +201,17 @@ function App() {
 
   const processImages = async (files: File[]) => {
     setIsProcessing(true)
+    setProcessingError(null)
+    setProcessingStats({ current: 0, total: files.length })
     const currentAdapter = getAdapter()
+    console.log('[MetaLens] Using adapter:', adapter, '→', currentAdapter.name, 'model:', model)
+
+    // Check if adapter requires API key and is configured
+    if (!currentAdapter.isConfigured()) {
+      setProcessingError(`${currentAdapter.name} requires an API key. Click "Configure" to add one.`)
+      setIsProcessing(false)
+      return
+    }
 
     const newImages: StoredImage[] = []
     for (const file of files) {
@@ -194,6 +228,7 @@ function App() {
         setProcessingStatus((prev) => ({ ...prev, [storedImage.id]: 'pending' }))
       } catch (error) {
         console.error('Failed to create thumbnail:', error)
+        setProcessingError(`Failed to process ${file.name}`)
       }
     }
 
@@ -201,6 +236,7 @@ function App() {
 
     for (let i = 0; i < newImages.length; i++) {
       const img = newImages[i]
+      setProcessingStats({ current: i + 1, total: newImages.length })
       setProcessingStatus((prev) => ({ ...prev, [img.id]: 'processing' }))
 
       try {
@@ -211,6 +247,7 @@ function App() {
       } catch (error) {
         console.error('Analysis error:', error)
         setProcessingStatus((prev) => ({ ...prev, [img.id]: 'error' }))
+        setProcessingError(`Analysis failed for ${img.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 
@@ -221,9 +258,13 @@ function App() {
   const handleReanalyze = async () => {
     if (images.length === 0) return
     setIsProcessing(true)
+    setProcessingError(null)
+    setProcessingStats({ current: 0, total: images.length })
     const currentAdapter = getAdapter()
 
-    for (const img of images) {
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i]
+      setProcessingStats({ current: i + 1, total: images.length })
       setProcessingStatus((prev) => ({ ...prev, [img.id]: 'processing' }))
       try {
         const result = await currentAdapter.analyze(img.thumbnail, model)
@@ -272,27 +313,22 @@ function App() {
 
   const getImageStatus = (id: string) => processingStatus[id] || 'complete'
 
-  const totalProgress =
-    images.length > 0
-      ? (Object.values(processingStatus).filter((s) => s === 'complete' || s === 'error')
-          .length /
-          images.length) *
-        100
-      : 0
-
   const hasResults = images.some((img) => img.result)
+  const processingProgress = processingStats.total > 0
+    ? (processingStats.current / processingStats.total) * 100
+    : 0
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* ===== TOP HEADER BAR (60px) ===== */}
       <header className="h-[60px] min-h-[60px] bg-card border-b border-border flex items-center px-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
-            <Scan className="h-5 w-5 text-primary" />
+          <div className="h-10 w-10 rounded-lg bg-gold/20 flex items-center justify-center">
+            <Scan className="h-5 w-5 text-gold" />
           </div>
           <div>
             <h1 className="font-semibold text-sm">MetaLens</h1>
-            <p className="text-xs text-muted-foreground">Image Analysis</p>
+            <p className="text-xs text-muted-foreground">AI Vision Analysis</p>
           </div>
         </div>
 
@@ -312,16 +348,16 @@ function App() {
         <div className="w-12 bg-background border-r border-border flex flex-col items-center py-2">
           <div className="flex flex-col items-center gap-1">
             <button
-              onClick={() => setView('upload')}
+              onClick={() => setView('analyze')}
               className={cn(
                 'w-10 h-10 rounded-lg flex items-center justify-center transition-all',
-                view === 'upload'
-                  ? 'bg-primary/20 text-primary'
+                view === 'analyze'
+                  ? 'bg-gold/20 text-gold'
                   : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-card'
               )}
-              title="Upload & Analyze"
+              title="AI Vision Analysis"
             >
-              <Upload className="h-5 w-5" />
+              <Wand2 className="h-5 w-5" />
             </button>
             <button
               onClick={() => setView('library')}
@@ -348,14 +384,14 @@ function App() {
               <FolderOpen className="h-5 w-5" />
             </button>
             <button
-              onClick={() => setView('draw')}
+              onClick={() => setView('sketch')}
               className={cn(
                 'w-10 h-10 rounded-lg flex items-center justify-center transition-all',
-                view === 'draw'
+                view === 'sketch'
                   ? 'bg-emerald-500/20 text-emerald-400'
                   : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-card'
               )}
-              title="Draw → Mermaid 2"
+              title="Sketch → Mermaid"
             >
               <PenTool className="h-5 w-5" />
             </button>
@@ -384,10 +420,10 @@ function App() {
         {/* ===== EXPLORER PANEL (288px) ===== */}
         <div className="w-72 bg-card border-r border-border flex flex-col">
           <div className="h-8 bg-muted border-b border-border flex items-center px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            {view === 'upload' && (
+            {view === 'analyze' && (
               <>
-                <Upload className="h-3 w-3 mr-2" />
-                Upload
+                <Wand2 className="h-3 w-3 mr-2" />
+                Vision Analysis
               </>
             )}
             {view === 'library' && (
@@ -402,10 +438,10 @@ function App() {
                 Batches
               </>
             )}
-            {view === 'draw' && (
+            {view === 'sketch' && (
               <>
                 <PenTool className="h-3 w-3 mr-2" />
-                Draw
+                Sketch
               </>
             )}
             {view === 'settings' && (
@@ -417,7 +453,7 @@ function App() {
           </div>
 
           <div className="flex-1 overflow-auto p-2">
-            {view === 'upload' && (
+            {view === 'analyze' && (
               <div className="space-y-1">
                 <ExplorerButton
                   icon={Sparkles}
@@ -456,6 +492,9 @@ function App() {
                       <span className="truncate flex-1 text-left text-muted-foreground">
                         {img.filename}
                       </span>
+                      {img.result && (
+                        <Eye className="h-3 w-3 text-green-500" />
+                      )}
                     </button>
                   ))
                 )}
@@ -466,10 +505,10 @@ function App() {
                 No batches yet
               </p>
             )}
-            {view === 'draw' && (
+            {view === 'sketch' && (
               <div className="space-y-1">
-                <ExplorerButton icon={PenTool} label="New Drawing" />
-                <ExplorerButton icon={FileJson} label="Mermaid 2 Output" />
+                <ExplorerButton icon={PenTool} label="New Sketch" />
+                <ExplorerButton icon={FileJson} label="Mermaid Output" />
                 <ExplorerButton icon={History} label="Recent" />
               </div>
             )}
@@ -487,40 +526,25 @@ function App() {
         </div>
 
         {/* ===== MAIN CONTENT ===== */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           <div className="h-8 bg-muted border-b border-border flex items-center px-3 text-xs font-semibold text-muted-foreground">
-            {view === 'upload' && 'Upload & Analyze'}
+            {view === 'analyze' && 'AI Vision Analysis'}
             {view === 'library' && `${images.length} Images`}
             {view === 'batches' && 'Batches'}
-            {view === 'draw' && 'Draw → Mermaid 2'}
+            {view === 'sketch' && 'Sketch → Mermaid Diagram'}
             {view === 'settings' && 'Settings'}
           </div>
 
           <div className="flex-1 overflow-auto p-6">
-            {view === 'upload' && (
-              <div className="space-y-6">
-                <Card>
-                  <CardContent className="pt-6">
-                    <EngineSelector
-                      adapter={adapter}
-                      model={model}
-                      onAdapterChange={handleAdapterChange}
-                      onModelChange={handleModelChange}
-                      onReanalyze={handleReanalyze}
-                      onConfigureKey={setApiKeyDialogAdapter}
-                      hasResults={hasResults}
-                      isProcessing={isProcessing}
-                    />
-                  </CardContent>
-                </Card>
-
+            {view === 'analyze' && (
+              <div className="space-y-6 max-w-4xl mx-auto">
+                {/* Main Drop Zone Card */}
                 <Card
                   className={cn(
-                    'relative border-2 border-dashed transition-all',
+                    'relative border-2 border-dashed transition-all overflow-hidden',
                     isDragging
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted hover:border-muted-foreground/50',
-                    isProcessing && 'opacity-50 pointer-events-none'
+                      ? 'border-gold bg-gold/5'
+                      : 'border-muted hover:border-gold/50'
                   )}
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -532,83 +556,170 @@ function App() {
                   }}
                   onDrop={handleDrop}
                 >
-                  <div className="p-12 text-center">
+                  <div className="p-8 text-center">
+                    {/* Icon */}
                     <div className="mb-4">
                       <div className="mx-auto w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center">
-                        <Scan className="h-8 w-8 text-gold" />
+                        {isProcessing ? (
+                          <Loader2 className="h-8 w-8 text-gold animate-spin" />
+                        ) : (
+                          <Scan className="h-8 w-8 text-gold" />
+                        )}
                       </div>
                     </div>
-                    <p className="text-lg font-medium">Drop images to analyze</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      or click the button below
-                    </p>
-                    <Button
-                      variant="gold"
-                      size="lg"
-                      onClick={() => document.getElementById('file-input')?.click()}
-                      disabled={isProcessing}
-                    >
-                      <Upload className="h-5 w-5 mr-2" />
-                      Choose Files & Analyze
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-4">
-                      Supports: JPG, PNG, WebP, GIF, ZIP
-                    </p>
-                    <input
-                      id="file-input"
-                      type="file"
-                      accept="image/*,.zip"
-                      multiple
-                      onChange={handleFileInput}
-                      className="hidden"
-                      disabled={isProcessing}
-                    />
-                  </div>
-                </Card>
 
-                {isProcessing && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Processing images...</span>
-                          <span>{Math.round(totalProgress)}%</span>
-                        </div>
-                        <Progress value={totalProgress} className="h-2" />
+                    {/* Title & Subtitle */}
+                    <h2 className="text-xl font-semibold mb-1">
+                      {isProcessing ? 'Analyzing...' : 'Drop images to analyze'}
+                    </h2>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      {isProcessing
+                        ? `Processing ${processingStats.current} of ${processingStats.total} images`
+                        : 'AI extracts metadata, tags, colors, objects & more'}
+                    </p>
+
+                    {/* Progress Bar (inside drop zone) */}
+                    {isProcessing && (
+                      <div className="max-w-xs mx-auto mb-6">
+                        <Progress value={processingProgress} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {Math.round(processingProgress)}% complete
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                    )}
 
-                {images.length > 0 && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-medium">Recent Images ({images.length})</h3>
+                    {/* Error Message */}
+                    {processingError && (
+                      <div className="max-w-md mx-auto mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <span>{processingError}</span>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={handleClearAll}
-                          className="text-destructive hover:text-destructive"
+                          className="ml-auto h-6 px-2"
+                          onClick={() => setProcessingError(null)}
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Clear All
+                          Dismiss
                         </Button>
                       </div>
-                      <ThumbnailGrid
-                        images={images.slice(0, 12)}
-                        selectedIds={selectedIds}
-                        selectionMode={selectionMode}
-                        onSelectToggle={handleSelectToggle}
-                        onSelectionModeChange={setSelectionMode}
-                        onImageClick={setSelectedImage}
-                        onRemoveImage={handleRemoveImage}
-                        onCreateBatch={() => setShowCreateBatch(true)}
-                        getImageStatus={getImageStatus}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
+                    )}
+
+                    {/* File Input Button */}
+                    {!isProcessing && (
+                      <>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,.zip,.heic,.heif,.avif"
+                          multiple
+                          onChange={handleFileInput}
+                          className="hidden"
+                        />
+                        <Button
+                          variant="gold"
+                          size="lg"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mb-4"
+                        >
+                          <Upload className="h-5 w-5 mr-2" />
+                          Choose Files
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG, WebP, GIF, HEIC, AVIF, SVG, or ZIP
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Recent Images Strip (inside card) */}
+                  {images.length > 0 && !isProcessing && (
+                    <div className="border-t border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium">
+                          Recent ({images.length})
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {hasResults && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleReanalyze}
+                              className="h-7 text-xs gap-1"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Re-analyze
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearAll}
+                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {images.slice(0, 8).map((img) => (
+                          <button
+                            key={img.id}
+                            onClick={() => setSelectedImage(img)}
+                            className={cn(
+                              'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
+                              selectedImage?.id === img.id
+                                ? 'border-gold'
+                                : 'border-transparent hover:border-muted-foreground/50'
+                            )}
+                          >
+                            <img
+                              src={img.thumbnail}
+                              alt={img.filename}
+                              className="w-full h-full object-cover"
+                            />
+                            {getImageStatus(img.id) === 'processing' && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 text-white animate-spin" />
+                              </div>
+                            )}
+                            {getImageStatus(img.id) === 'error' && (
+                              <div className="absolute inset-0 bg-destructive/50 flex items-center justify-center">
+                                <AlertCircle className="h-4 w-4 text-white" />
+                              </div>
+                            )}
+                            {img.result && getImageStatus(img.id) !== 'processing' && (
+                              <div className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-500 border border-background" />
+                            )}
+                          </button>
+                        ))}
+                        {images.length > 8 && (
+                          <button
+                            onClick={() => setView('library')}
+                            className="flex-shrink-0 w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground hover:bg-muted-foreground/20"
+                          >
+                            +{images.length - 8}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+
+                {/* Engine Selector (collapsible/secondary) */}
+                <Card>
+                  <CardContent className="pt-6">
+                    <EngineSelector
+                      adapter={adapter}
+                      model={model}
+                      onAdapterChange={handleAdapterChange}
+                      onModelChange={handleModelChange}
+                      onConfigureKey={setApiKeyDialogAdapter}
+                      hasResults={false}
+                      isProcessing={isProcessing}
+                    />
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -622,7 +733,12 @@ function App() {
                     </p>
                   </div>
                   {images.length > 0 && (
-                    <Button variant="outline" size="sm" onClick={handleClearAll}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearAll}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Clear Library
                     </Button>
@@ -646,8 +762,8 @@ function App() {
                     <CardContent className="py-12 text-center">
                       <Images className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">No images yet</p>
-                      <Button className="mt-4" onClick={() => setView('upload')}>
-                        Upload Images
+                      <Button className="mt-4" onClick={() => setView('analyze')}>
+                        Analyze Images
                       </Button>
                     </CardContent>
                   </Card>
@@ -675,12 +791,12 @@ function App() {
               </div>
             )}
 
-            {view === 'draw' && (
+            {view === 'sketch' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold">Draw → Mermaid 2</h2>
+                  <h2 className="text-lg font-semibold">Sketch → Mermaid Diagram</h2>
                   <p className="text-sm text-muted-foreground">
-                    Sketch diagrams with pen, convert to Mermaid 2 format
+                    Draw flowcharts by hand, get Mermaid code instantly
                   </p>
                 </div>
                 <Card>
@@ -688,10 +804,10 @@ function App() {
                     <PenTool className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">Coming Soon</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Draw shapes → AI recognition → Mermaid 2 code
+                      Sketch shapes → AI recognizes → Mermaid code
                     </p>
                     <Badge variant="secondary" className="mt-4">
-                      Placeholder
+                      In Development
                     </Badge>
                   </CardContent>
                 </Card>
@@ -723,42 +839,20 @@ function App() {
             )}
           </div>
 
-          {/* Selected Image Detail */}
+          {/* Selected Image Detail Panel */}
           {selectedImage && selectedImage.result && (
-            <div className="border-t border-border p-4 bg-card">
-              <div className="flex gap-4">
-                <img
-                  src={selectedImage.thumbnail}
-                  alt={selectedImage.filename}
-                  className="w-20 h-20 rounded object-cover"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-medium text-sm truncate">
-                      {selectedImage.result.suggestedTitle}
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedImage(null)}
-                      className="h-6 px-2 text-xs"
-                    >
-                      Close
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                    {selectedImage.result.description}
-                  </p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selectedImage.result.tags.slice(0, 5).map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-[10px]">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ImageDetailPanel
+              image={selectedImage}
+              adapter={getAdapter()}
+              model={model}
+              onClose={() => setSelectedImage(null)}
+              onUpdate={(updated) => {
+                setSelectedImage(updated)
+                setImages((prev) =>
+                  prev.map((img) => (img.id === updated.id ? updated : img))
+                )
+              }}
+            />
           )}
         </div>
       </div>

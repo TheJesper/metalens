@@ -1,4 +1,4 @@
-import { AnalysisResult, VisionAdapter } from './types'
+import { AnalysisResult, VisionAdapter, ChatMessage, ChatResponse } from './types'
 import { getOllamaUrl } from './state'
 
 // Convert File to base64
@@ -143,6 +143,90 @@ Format as JSON:
         description: data.response?.slice(0, 200) || 'Analysis complete',
         suggestedTitle: 'Analyzed Image',
       }
+    }
+  },
+
+  async chat(
+    image: string,
+    metadata: AnalysisResult,
+    message: string,
+    history: ChatMessage[],
+    model: string
+  ): Promise<ChatResponse> {
+    const url = getOllamaUrl()
+
+    // Extract base64 from data URL if needed
+    const imageBase64 = image.startsWith('data:') ? image.split(',')[1] : image
+
+    // Build context with metadata
+    const metadataContext = `Current image metadata:
+- Title: ${metadata.suggestedTitle}
+- Description: ${metadata.description}
+- Tags: ${metadata.tags.join(', ')}
+- Objects: ${metadata.objects.map(o => `${o.name} (${Math.round(o.confidence * 100)}%)`).join(', ')}
+- Colors: ${metadata.colors.map(c => `${c.name} (${c.percentage}%)`).join(', ')}
+- Mood: ${metadata.mood}
+- Scene: ${metadata.scene}`
+
+    // Build conversation history
+    const historyText = history.map(h =>
+      `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`
+    ).join('\n')
+
+    const prompt = `You are analyzing an image. Here is the existing metadata:
+
+${metadataContext}
+
+${historyText ? `Previous conversation:\n${historyText}\n` : ''}
+User's new question: ${message}
+
+Respond helpfully about the image. If the user asks to modify tags, description, or other metadata, include an "updatedMetadata" object with the changes.
+
+Format your response as JSON:
+{
+  "message": "Your helpful response here",
+  "updatedMetadata": {
+    "tags": ["new", "tags", "if changed"],
+    "description": "new description if changed",
+    "suggestedTitle": "new title if changed"
+  }
+}
+
+Only include updatedMetadata if the user requested changes. The message field is required.`
+
+    const response = await fetch(`${url}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        prompt,
+        images: [imageBase64],
+        stream: false,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Ollama error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    try {
+      // Try to parse JSON response
+      const jsonMatch = data.response.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        return {
+          message: parsed.message || data.response,
+          updatedMetadata: parsed.updatedMetadata,
+        }
+      }
+    } catch {
+      // Fallback to plain text response
+    }
+
+    return {
+      message: data.response || 'No response from model',
     }
   },
 
