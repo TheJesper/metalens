@@ -34,11 +34,11 @@ export interface VisionAdapter {
 }
 
 export const ADAPTERS = {
-  mock: 'Mock (Demo)',
   openai: 'OpenAI Vision',
   claude: 'Claude Vision',
   google: 'Google Vision',
   ollama: 'Ollama (Local)',
+  mock: 'Mock (Demo)',
 } as const
 
 export type AdapterType = keyof typeof ADAPTERS

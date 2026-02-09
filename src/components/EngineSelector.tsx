@@ -30,6 +30,7 @@ interface EngineSelectorProps {
   onConfigureKey?: (adapter: AdapterType) => void
   hasResults?: boolean
   isProcessing?: boolean
+  refreshTrigger?: number // Increment to force state refresh
 }
 
 export function EngineSelector({
@@ -41,12 +42,18 @@ export function EngineSelector({
   onConfigureKey,
   hasResults = false,
   isProcessing = false,
+  refreshTrigger = 0,
 }: EngineSelectorProps) {
   const [states, setStates] = useState<AdapterStates>(getAdapterStates())
   const [checkingOllama, setCheckingOllama] = useState(false)
   const [ollamaUrl, setOllamaUrlState] = useState(getOllamaUrl())
   const [showOllamaConfig, setShowOllamaConfig] = useState(false)
   const models = ADAPTER_MODELS[adapter]
+
+  // Refresh states when refreshTrigger changes (e.g., after API key saved)
+  useEffect(() => {
+    setStates(getAdapterStates())
+  }, [refreshTrigger])
 
   // Check Ollama health on mount and when switching to Ollama
   useEffect(() => {
