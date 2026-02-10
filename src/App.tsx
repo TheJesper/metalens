@@ -24,6 +24,7 @@ import {
   X,
   Camera,
   Users,
+  Download,
 } from 'lucide-react'
 import { AdapterType, ADAPTER_MODELS, ADAPTERS, mockAdapter, ollamaAdapter, openaiAdapter, claudeAdapter, googleAdapter } from './lib/adapters'
 import { EngineSelector } from './components/EngineSelector'
@@ -45,6 +46,8 @@ import {
   generateId,
   getStorageUsage,
   createBatch,
+  exportMetadataJSON,
+  exportFullDataJSON,
 } from './lib/storage'
 import {
   QueueItem,
@@ -1316,15 +1319,26 @@ function App() {
                     </p>
                   </div>
                   {images.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearAll}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Clear Library
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => exportMetadataJSON(images)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Export JSON
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearAll}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear Library
+                      </Button>
+                    </div>
                   )}
                 </div>
 

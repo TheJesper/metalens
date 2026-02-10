@@ -181,3 +181,40 @@ export function getStorageUsage(): { used: number; available: number; percentage
     percentage: (used / available) * 100,
   }
 }
+
+// Export metadata to JSON file
+export function exportMetadataJSON(images: StoredImage[]): void {
+  // Create export data without thumbnails (too large)
+  const exportData = images.map((img) => ({
+    id: img.id,
+    filename: img.filename,
+    addedAt: img.addedAt,
+    batchId: img.batchId,
+    result: img.result,
+  }))
+
+  const json = JSON.stringify(exportData, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `metalens-export-${new Date().toISOString().split('T')[0]}.json`
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
+
+// Export full data including thumbnails (can be large)
+export function exportFullDataJSON(images: StoredImage[]): void {
+  const json = JSON.stringify(images, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `metalens-full-export-${new Date().toISOString().split('T')[0]}.json`
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
