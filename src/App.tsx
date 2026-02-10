@@ -166,6 +166,30 @@ function App() {
     setQueueItems(stored)
   }, [])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentItems = view === 'queue' ? queueItems : view === 'library' ? images : []
+      if (currentItems.length === 0) return
+
+      // Ctrl+A / Cmd+A: Select All
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && (view === 'queue' || view === 'library')) {
+        e.preventDefault()
+        setSelectionMode(true)
+        setSelectedIds(currentItems.map(item => item.id))
+      }
+
+      // Escape: Clear selection / Exit selection mode
+      if (e.key === 'Escape' && selectionMode) {
+        setSelectionMode(false)
+        setSelectedIds([])
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [view, queueItems, images, selectionMode])
+
   const handleAdapterChange = (newAdapter: AdapterType) => {
     setAdapter(newAdapter)
     const newModel = ADAPTER_MODELS[newAdapter][0]
@@ -373,10 +397,67 @@ function App() {
     setStorageUsage(getStorageUsage())
   }
 
-  const handleSelectToggle = (id: string) => {
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
+
+  const handleSelectToggle = (id: string, event?: React.MouseEvent) => {
+    const currentItems = view === 'queue' ? queueItems : images
+    const currentIds = currentItems.map(item => item.id)
+
+    // Shift+Click: Range select
+    if (event?.shiftKey && lastSelectedId && selectionMode) {
+      const lastIndex = currentIds.indexOf(lastSelectedId)
+      const currentIndex = currentIds.indexOf(id)
+      if (lastIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastIndex, currentIndex)
+        const end = Math.max(lastIndex, currentIndex)
+        const rangeIds = currentIds.slice(start, end + 1)
+        setSelectedIds((prev) => {
+          const newSet = new Set([...prev, ...rangeIds])
+          return Array.from(newSet)
+        })
+        return
+      }
+    }
+
+    // Ctrl/Cmd+Click or normal selection mode: Toggle individual
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
     )
+    setLastSelectedId(id)
+  }
+
+  const handleSelectAll = () => {
+    const currentItems = view === 'queue' ? queueItems : images
+    setSelectionMode(true)
+    setSelectedIds(currentItems.map(item => item.id))
+  }
+
+  const handleSelectNone = () => {
+    setSelectedIds([])
+  }
+
+  const handleBatchDelete = () => {
+    if (view === 'queue') {
+      selectedIds.forEach(id => removeFromQueue(id))
+      setQueueItems((prev) => prev.filter(item => !selectedIds.includes(item.id)))
+    } else if (view === 'library') {
+      selectedIds.forEach(id => {
+        removeImage(id)
+      })
+      setImages((prev) => prev.filter(img => !selectedIds.includes(img.id)))
+    }
+    setSelectedIds([])
+    setSelectionMode(false)
+    setStorageUsage(getStorageUsage())
+  }
+
+  const handleBatchProcess = async () => {
+    if (view === 'queue') {
+      // Process selected queue items
+      await handleProcessQueue()
+    }
+    setSelectedIds([])
+    setSelectionMode(false)
   }
 
   const handleCreateBatch = (name: string) => {
@@ -919,7 +1000,7 @@ function App() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {queueStats.pending > 0 && !autoProcess && (
+                    {!selectionMode && queueStats.pending > 0 && !autoProcess && (
                       <Button
                         variant="default"
                         size="sm"
@@ -940,16 +1021,79 @@ function App() {
                         )}
                       </Button>
                     )}
-                    {queueItems.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearQueue}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clear Queue
-                      </Button>
+                    {!selectionMode && queueItems.length > 0 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectionMode(true)}
+                        >
+                          Select
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearQueue}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Clear Queue
+                        </Button>
+                      </>
+                    )}
+                    {selectionMode && (
+                      <>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedIds.length} selected
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSelectAll}
+                        >
+                          Select All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSelectNone}
+                        >
+                          Select None
+                        </Button>
+                        {selectedIds.length > 0 && (
+                          <>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={handleBatchProcess}
+                              className="gap-2"
+                            >
+                              <Wand2 className="h-4 w-4" />
+                              Process ({selectedIds.length})
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleBatchDelete}
+                              className="gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete ({selectedIds.length})
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectionMode(false)
+                            setSelectedIds([])
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Cancel
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -977,70 +1121,107 @@ function App() {
                 {/* Queue items grid */}
                 {queueItems.length > 0 ? (
                   <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                    {queueItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="relative aspect-square rounded-lg overflow-hidden bg-secondary"
-                        title={item.filename}
-                      >
-                        <img
-                          src={item.thumbnail}
-                          alt={item.filename}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-
-                        {/* Status badge */}
-                        <div className="absolute top-2 left-2">
-                          {item.status === 'pending' && (
-                            <Badge variant="secondary" className="gap-1 text-xs">
-                              Pending
-                            </Badge>
+                    {queueItems.map((item) => {
+                      const isSelected = selectedIds.includes(item.id)
+                      return (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            'relative aspect-square rounded-lg overflow-hidden bg-secondary cursor-pointer transition-all',
+                            isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+                            selectionMode && 'hover:ring-2 hover:ring-primary/50'
                           )}
-                          {item.status === 'processing' && (
-                            <Badge variant="secondary" className="gap-1 text-xs">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            </Badge>
-                          )}
-                          {item.status === 'complete' && (
-                            <Badge variant="default" className="gap-1 text-xs bg-green-600">
-                              <Check className="h-3 w-3" />
-                            </Badge>
-                          )}
-                          {item.status === 'error' && (
-                            <Badge variant="destructive" className="gap-1 text-xs">
-                              <AlertCircle className="h-3 w-3" />
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Remove button */}
-                        <button
-                          onClick={() => handleRemoveQueueItem(item.id)}
-                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity hover:bg-destructive"
-                          title="Remove from queue"
+                          title={item.filename}
+                          onClick={(e) => {
+                            if (selectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
+                              if (!selectionMode) setSelectionMode(true)
+                              handleSelectToggle(item.id, e)
+                            }
+                          }}
                         >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                          <img
+                            src={item.thumbnail}
+                            alt={item.filename}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
 
-                        {/* Retry button for errors */}
-                        {item.status === 'error' && (
-                          <button
-                            onClick={() => handleRetryQueueItem(item.id)}
-                            className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors"
-                            title="Retry processing"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                          {/* Selection Checkbox */}
+                          {selectionMode && (
+                            <div
+                              className={cn(
+                                'absolute top-2 left-2 w-5 h-5 rounded border-2 flex items-center justify-center transition-all z-10',
+                                isSelected
+                                  ? 'bg-primary border-primary'
+                                  : 'border-white/70 bg-black/30'
+                              )}
+                            >
+                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                          )}
 
-                        {/* Filename overlay */}
-                        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent">
-                          <p className="text-xs font-medium text-white truncate drop-shadow-lg">
-                            {item.filename}
-                          </p>
+                          {/* Status badge */}
+                          {!selectionMode && (
+                            <div className="absolute top-2 left-2">
+                              {item.status === 'pending' && (
+                                <Badge variant="secondary" className="gap-1 text-xs">
+                                  Pending
+                                </Badge>
+                              )}
+                              {item.status === 'processing' && (
+                                <Badge variant="secondary" className="gap-1 text-xs">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                </Badge>
+                              )}
+                              {item.status === 'complete' && (
+                                <Badge variant="default" className="gap-1 text-xs bg-green-600">
+                                  <Check className="h-3 w-3" />
+                                </Badge>
+                              )}
+                              {item.status === 'error' && (
+                                <Badge variant="destructive" className="gap-1 text-xs">
+                                  <AlertCircle className="h-3 w-3" />
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Remove button */}
+                          {!selectionMode && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRemoveQueueItem(item.id)
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity hover:bg-destructive"
+                              title="Remove from queue"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Retry button for errors */}
+                          {!selectionMode && item.status === 'error' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRetryQueueItem(item.id)
+                              }}
+                              className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors"
+                              title="Retry processing"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Filename overlay */}
+                          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent">
+                            <p className="text-xs font-medium text-white truncate drop-shadow-lg">
+                              {item.filename}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <Card>

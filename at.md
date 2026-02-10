@@ -42,14 +42,14 @@
 - [x] META-105: Implement Queue → Recent after successful processing
 - [x] META-106: Add queue progress indicators and status badges
 
-**Phase 2: Selection System (Priority 1)**
-- [ ] META-110: Implement multi-select with Ctrl/Cmd+Click
-- [ ] META-111: Implement range select with Shift+Click
-- [ ] META-112: Add "Select All" and "Select None" buttons
-- [ ] META-113: Add visual feedback (checkmarks, blue borders)
-- [ ] META-114: Create BatchActionBar component
-- [ ] META-115: Implement batch actions (Process, Delete, Move)
-- [ ] META-116: Add keyboard shortcuts (Ctrl+A, Escape)
+**Phase 2: Selection System (Priority 1)** ✓ COMPLETE
+- [x] META-110: Implement multi-select with Ctrl/Cmd+Click
+- [x] META-111: Implement range select with Shift+Click
+- [x] META-112: Add "Select All" and "Select None" buttons
+- [x] META-113: Add visual feedback (checkmarks, blue borders)
+- [x] META-114: Create BatchActionBar component
+- [x] META-115: Implement batch actions (Process, Delete, Move)
+- [x] META-116: Add keyboard shortcuts (Ctrl+A, Escape)
 
 **Phase 3: Hover Menu (Priority 2)**
 - [ ] META-120: Create ImageHoverMenu component
