@@ -6,6 +6,8 @@
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
 @import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/orbitron/700.css';
+@import '@fontsource/orbitron/900.css';
 
 @tailwind base;
 @tailwind components;
@@ -17,6 +19,7 @@
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --font-display: 'Dosis', sans-serif;
+    --font-logo: 'Orbitron', sans-serif;
     /* CoverKit Theme - Azure Blue */
     --background: 222 47% 11%;         /* #0f172a slate-900 */
     --foreground: 210 40% 93%;         /* #e2e8f0 slate-200 */
@@ -98,5 +101,9 @@
 
   .font-mono {
     font-family: var(--font-mono);
+  }
+
+  .font-logo {
+    font-family: var(--font-logo);
   }
 }

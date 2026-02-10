@@ -327,12 +327,14 @@ function App() {
       {/* ===== TOP HEADER BAR (60px) ===== */}
       <header className="h-[60px] min-h-[60px] bg-card border-b border-border flex items-center px-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-gold/20 flex items-center justify-center">
-            <Scan className="h-5 w-5 text-gold" />
+          <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+            <Scan className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="font-semibold text-sm">MetaLens</h1>
-            <p className="text-xs text-muted-foreground">AI Vision Analysis</p>
+            <h1 className="font-logo text-lg font-bold tracking-wide text-foreground">
+              METALENS
+            </h1>
+            <p className="text-xs text-muted-foreground tracking-wider">AI VISION ANALYSIS</p>
           </div>
         </div>
 
