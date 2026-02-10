@@ -33,6 +33,7 @@ import { ThumbnailGrid } from './components/ThumbnailGrid'
 import { CreateBatchDialog } from './components/CreateBatchDialog'
 import { ImageDetailPanel } from './components/ImageDetailPanel'
 import { CameraCapture } from './components/CameraCapture'
+import { BatchCard } from './components/BatchCard'
 import { FacesPage } from './pages/FacesPage'
 import { SketchPage } from './pages/SketchPage'
 import {
@@ -48,6 +49,11 @@ import {
   createBatch,
   exportMetadataJSON,
   exportFullDataJSON,
+  getBatches,
+  renameBatch,
+  deleteBatch,
+  toggleBatchExpanded,
+  Batch,
 } from './lib/storage'
 import {
   QueueItem,
@@ -141,6 +147,9 @@ function App() {
   // Queue system
   const [queueItems, setQueueItems] = useState<QueueItem[]>([])
   const [autoProcess, setAutoProcess] = useState(() => getAutoProcessQueue())
+
+  // Batches
+  const [batches, setBatches] = useState<Batch[]>(() => getBatches())
 
   // Selection mode for batching
   const [selectionMode, setSelectionMode] = useState(false)
@@ -473,6 +482,23 @@ function App() {
     setSelectedIds([])
     setSelectionMode(false)
     setImages(getStoredImages())
+    setBatches(getBatches())
+  }
+
+  const handleRenameBatch = (id: string, name: string) => {
+    renameBatch(id, name)
+    setBatches(getBatches())
+  }
+
+  const handleDeleteBatch = (id: string) => {
+    deleteBatch(id)
+    setBatches(getBatches())
+    setImages(getStoredImages())
+  }
+
+  const handleToggleBatchExpanded = (id: string) => {
+    toggleBatchExpanded(id)
+    setBatches(getBatches())
   }
 
   const getImageStatus = (id: string) => processingStatus[id] || 'complete'
@@ -1370,21 +1396,43 @@ function App() {
 
             {view === 'batches' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold">Batches</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Organize images into groups
-                  </p>
-                </div>
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No batches yet</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Select images in the library and create a batch
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Batches ({batches.length})</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Organize images into groups
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
+
+                {batches.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No batches yet</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Select images in the library and create a batch
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {batches.map((batch) => (
+                      <BatchCard
+                        key={batch.id}
+                        batch={batch}
+                        imageCount={batch.imageIds.length}
+                        onToggleExpanded={() => handleToggleBatchExpanded(batch.id)}
+                        onRename={(name) => handleRenameBatch(batch.id, name)}
+                        onDelete={() => handleDeleteBatch(batch.id)}
+                        onViewImages={() => {
+                          setView('library')
+                          // TODO: Filter library by batch
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
