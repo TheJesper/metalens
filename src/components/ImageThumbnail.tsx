@@ -38,8 +38,11 @@ export function ImageThumbnail({
       <img
         src={image.thumbnail}
         alt={image.filename}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
       />
+
+      {/* Hover Overlay */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
 
       {/* Selection Checkbox */}
       {selectionMode && (
@@ -73,15 +76,16 @@ export function ImageThumbnail({
       {!selectionMode && onRemove && (
         <button
           onClick={handleRemove}
-          className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:scale-110 shadow-lg"
+          title="Remove image"
         >
-          <X className="h-3 w-3" />
+          <X className="h-3.5 w-3.5" />
         </button>
       )}
 
       {/* Filename Overlay */}
-      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-        <p className="text-xs text-white truncate">{image.filename}</p>
+      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <p className="text-xs font-medium text-white truncate drop-shadow-lg">{image.filename}</p>
       </div>
     </div>
   )
