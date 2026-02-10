@@ -23,6 +23,7 @@ import {
   Check,
   X,
   Camera,
+  Users,
 } from 'lucide-react'
 import { AdapterType, ADAPTER_MODELS, ADAPTERS, mockAdapter, ollamaAdapter, openaiAdapter, claudeAdapter, googleAdapter } from './lib/adapters'
 import { EngineSelector } from './components/EngineSelector'
@@ -31,6 +32,7 @@ import { ThumbnailGrid } from './components/ThumbnailGrid'
 import { CreateBatchDialog } from './components/CreateBatchDialog'
 import { ImageDetailPanel } from './components/ImageDetailPanel'
 import { CameraCapture } from './components/CameraCapture'
+import { FacesPage } from './pages/FacesPage'
 import {
   StoredImage,
   getStoredImages,
@@ -56,7 +58,7 @@ import {
 } from './lib/queue'
 
 type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | 'error'>
-type View = 'analyze' | 'queue' | 'library' | 'batches' | 'sketch' | 'settings'
+type View = 'analyze' | 'queue' | 'library' | 'batches' | 'faces' | 'sketch' | 'settings'
 
 // Version with Swedish timestamp
 const APP_VERSION = 'v1.1.0 (2026-02-10 11:23 CET)'
@@ -605,6 +607,18 @@ function App() {
             >
               <Camera className="h-5 w-5" />
             </button>
+            <button
+              onClick={() => setView('faces')}
+              className={cn(
+                'w-10 h-10 rounded-lg flex items-center justify-center transition-all',
+                view === 'faces'
+                  ? 'bg-pink-500/20 text-pink-400'
+                  : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-card'
+              )}
+              title="Face Recognition"
+            >
+              <Users className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="w-6 h-px bg-border my-2" />
@@ -652,6 +666,12 @@ function App() {
               <>
                 <FolderOpen className="h-3 w-3 mr-2" />
                 Batches
+              </>
+            )}
+            {view === 'faces' && (
+              <>
+                <Users className="h-3 w-3 mr-2" />
+                Face Recognition
               </>
             )}
             {view === 'sketch' && (
@@ -728,6 +748,12 @@ function App() {
                 <ExplorerButton icon={History} label="Recent" />
               </div>
             )}
+            {view === 'faces' && (
+              <div className="space-y-1">
+                <ExplorerButton icon={Users} label="People" active />
+                <ExplorerButton icon={AlertCircle} label="Unassigned" />
+              </div>
+            )}
             {view === 'settings' && (
               <div className="space-y-1">
                 <ExplorerButton icon={Sparkles} label="AI Engines" active />
@@ -745,8 +771,10 @@ function App() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="h-8 bg-muted border-b border-border flex items-center px-3 text-xs font-semibold text-muted-foreground">
             {view === 'analyze' && 'AI Vision Analysis'}
+            {view === 'queue' && 'Processing Queue'}
             {view === 'library' && `${images.length} Images`}
             {view === 'batches' && 'Batches'}
+            {view === 'faces' && 'Face Recognition'}
             {view === 'sketch' && 'Sketch → Mermaid Diagram'}
             {view === 'settings' && 'Settings'}
           </div>
@@ -1367,6 +1395,8 @@ function App() {
                 </Card>
               </div>
             )}
+
+            {view === 'faces' && <FacesPage />}
 
             {view === 'settings' && (
               <div className="space-y-6">
