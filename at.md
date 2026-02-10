@@ -28,20 +28,71 @@
 - [x] META-056: Fix description indentation issue
 - [x] META-057: Color swatches with hex/name display
 
-## Next Sprint (Features)
+## Next Sprint (Queue & Faces System)
 
-### SPEC-META-003: Face Detection Integration
-> Spec: `docs/specs/features/face-detection/SPEC-META-003.md`
+### SPEC-META-005: Queue & Facial Recognition System
+> Spec: `docs/specs/QUEUE-AND-FACES-SYSTEM.md`
 
-- [ ] META-060: Research Photo Manager face detection implementation
-- [ ] META-061: Add face detection toggle to Settings
-- [ ] META-062: Integrate face detection on image upload
-- [ ] META-063: Create face cutout extraction (crop bounding box)
-- [ ] META-064: Implement face embedding storage
-- [ ] META-065: Add face clustering/grouping algorithm
-- [ ] META-066: Create FaceGroup UI component
-- [ ] META-067: Add per-image faces display
-- [ ] META-068: Allow naming face groups
+**Phase 1: Queue System (Priority 1)**
+- [x] META-100: Create Queue storage system in localStorage
+- [ ] META-101: Add Queue view/tab to navigation
+- [ ] META-102: Implement upload → Queue flow (not auto-process)
+- [ ] META-103: Add "Auto-process queue" checkbox setting
+- [ ] META-104: Add manual "Process Queue" button
+- [ ] META-105: Implement Queue → Recent after successful processing
+- [ ] META-106: Add queue progress indicators and status badges
+
+**Phase 2: Selection System (Priority 1)**
+- [ ] META-110: Implement multi-select with Ctrl/Cmd+Click
+- [ ] META-111: Implement range select with Shift+Click
+- [ ] META-112: Add "Select All" and "Select None" buttons
+- [ ] META-113: Add visual feedback (checkmarks, blue borders)
+- [ ] META-114: Create BatchActionBar component
+- [ ] META-115: Implement batch actions (Process, Delete, Move)
+- [ ] META-116: Add keyboard shortcuts (Ctrl+A, Escape)
+
+**Phase 3: Hover Menu (Priority 2)**
+- [ ] META-120: Create ImageHoverMenu component
+- [ ] META-121: Add hover toolbar with actions (Rescan, Discard, Move)
+- [ ] META-122: Implement smooth slide-down animation
+- [ ] META-123: Add tooltips to hover menu icons
+- [ ] META-124: Make hover menu reusable for both Meta and Face pages
+
+**Phase 4: Facial Recognition (Priority 2)**
+- [ ] META-130: Integrate face detection via OpenAI Vision API
+- [ ] META-131: Create Face data model and storage
+- [ ] META-132: Create Person/bucket data model
+- [ ] META-133: Build Face Recognition page (/faces route)
+- [ ] META-134: Create PersonBucket component (face group display)
+- [ ] META-135: Build PersonBucketDetail view (all faces in bucket)
+- [ ] META-136: Add "New face detected" assignment dialog
+- [ ] META-137: Implement face → person assignment flow
+- [ ] META-138: Add rescan/discard face data actions
+- [ ] META-139: Implement move faces between buckets
+
+**Phase 5: Webcam Capture (Priority 3)**
+- [ ] META-140: Create CameraCapture component
+- [ ] META-141: Request camera permissions (getUserMedia)
+- [ ] META-142: Add live camera preview
+- [ ] META-143: Implement front/rear camera switching
+- [ ] META-144: Add capture button and save to Queue
+- [ ] META-145: Route captured images to Meta or Face page
+- [ ] META-146: Add "📷 Capture" button to main navigation
+
+## Future Sprints
+
+### SPEC-META-003: Face Detection Integration (DEPRECATED - merged into META-005)
+> See SPEC-META-005 for updated face detection roadmap
+
+- ~~[ ] META-060: Research Photo Manager face detection implementation~~
+- ~~[ ] META-061: Add face detection toggle to Settings~~
+- ~~[ ] META-062: Integrate face detection on image upload~~
+- ~~[ ] META-063: Create face cutout extraction (crop bounding box)~~
+- ~~[ ] META-064: Implement face embedding storage~~
+- ~~[ ] META-065: Add face clustering/grouping algorithm~~
+- ~~[ ] META-066: Create FaceGroup UI component~~
+- ~~[ ] META-067: Add per-image faces display~~
+- ~~[ ] META-068: Allow naming face groups~~
 
 ### SPEC-META-004: Sketch to Mermaid
 > Spec: `docs/specs/features/sketch-to-mermaid/SPEC-META-004.md`
@@ -87,4 +138,4 @@
 
 ---
 
-*Updated: 2026-02-09*
+*Updated: 2026-02-10*
