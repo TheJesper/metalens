@@ -20,6 +20,8 @@ import {
   Loader2,
   Eye,
   Wand2,
+  Check,
+  X,
 } from 'lucide-react'
 import { AdapterType, ADAPTER_MODELS, ADAPTERS, mockAdapter, ollamaAdapter, openaiAdapter, claudeAdapter, googleAdapter } from './lib/adapters'
 import { EngineSelector } from './components/EngineSelector'
@@ -39,9 +41,21 @@ import {
   getStorageUsage,
   createBatch,
 } from './lib/storage'
+import {
+  QueueItem,
+  getQueueItems,
+  addToQueue,
+  updateQueueItem,
+  removeFromQueue,
+  clearQueue,
+  getQueueStats,
+  getAutoProcessQueue,
+  setAutoProcessQueue,
+  getPendingQueueItems,
+} from './lib/queue'
 
 type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | 'error'>
-type View = 'analyze' | 'library' | 'batches' | 'sketch' | 'settings'
+type View = 'analyze' | 'queue' | 'library' | 'batches' | 'sketch' | 'settings'
 
 // Version with Swedish timestamp
 const APP_VERSION = 'v1.1.0 (2026-02-10 11:23 CET)'
@@ -117,6 +131,10 @@ function App() {
   const [selectedImage, setSelectedImage] = useState<StoredImage | null>(null)
   const [processingError, setProcessingError] = useState<string | null>(null)
 
+  // Queue system
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([])
+  const [autoProcess, setAutoProcess] = useState(() => getAutoProcessQueue())
+
   // Selection mode for batching
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -140,6 +158,12 @@ function App() {
     const stored = getStoredImages()
     setImages(stored)
     setStorageUsage(getStorageUsage())
+  }, [])
+
+  // Load queue items from localStorage on mount
+  useEffect(() => {
+    const stored = getQueueItems()
+    setQueueItems(stored)
   }, [])
 
   const handleAdapterChange = (newAdapter: AdapterType) => {
@@ -203,12 +227,44 @@ function App() {
     }
   }
 
+  // Add files to queue
   const processImages = async (files: File[]) => {
+    const newItems: QueueItem[] = []
+    for (const file of files) {
+      try {
+        const thumbnail = await createThumbnail(file)
+        const queueItem = addToQueue({
+          file,
+          thumbnail,
+          filename: file.name,
+        })
+        newItems.push(queueItem)
+        setQueueItems((prev) => [...prev, queueItem])
+      } catch (error) {
+        console.error('Failed to create thumbnail:', error)
+        setProcessingError(`Failed to add ${file.name} to queue`)
+      }
+    }
+
+    // Switch to queue view if not auto-processing
+    if (!autoProcess) {
+      setView('queue')
+    } else if (newItems.length > 0) {
+      // Trigger auto-processing
+      setTimeout(() => handleProcessQueue(), 100)
+    }
+  }
+
+  // Process queue items
+  const handleProcessQueue = async () => {
+    const pendingItems = queueItems.filter(item => item.status === 'pending')
+    if (pendingItems.length === 0) return
+
     setIsProcessing(true)
     setProcessingError(null)
-    setProcessingStats({ current: 0, total: files.length })
+    setProcessingStats({ current: 0, total: pendingItems.length })
     const currentAdapter = getAdapter()
-    console.log('[MetaLens] Using adapter:', adapter, '→', currentAdapter.name, 'model:', model)
+    console.log('[MetaLens] Processing queue with adapter:', adapter, '→', currentAdapter.name, 'model:', model)
 
     // Check if adapter requires API key and is configured
     if (!currentAdapter.isConfigured()) {
@@ -217,41 +273,56 @@ function App() {
       return
     }
 
-    const newImages: StoredImage[] = []
-    for (const file of files) {
+    for (let i = 0; i < pendingItems.length; i++) {
+      const queueItem = pendingItems[i]
+      setProcessingStats({ current: i + 1, total: pendingItems.length })
+
+      // Update status to processing
+      updateQueueItem(queueItem.id, { status: 'processing' })
+      setQueueItems((prev) => prev.map(item =>
+        item.id === queueItem.id ? { ...item, status: 'processing' } : item
+      ))
+
       try {
-        const thumbnail = await createThumbnail(file)
+        // Analyze the image
+        const result = await currentAdapter.analyze(queueItem.thumbnail, model)
+
+        // Create stored image with analysis result
         const storedImage: StoredImage = {
           id: generateId(),
-          filename: file.name,
-          thumbnail,
+          filename: queueItem.filename,
+          thumbnail: queueItem.thumbnail,
           addedAt: new Date().toISOString(),
+          result,
         }
+
+        // Add to library
         addImage(storedImage)
-        newImages.push(storedImage)
-        setProcessingStatus((prev) => ({ ...prev, [storedImage.id]: 'pending' }))
-      } catch (error) {
-        console.error('Failed to create thumbnail:', error)
-        setProcessingError(`Failed to process ${file.name}`)
-      }
-    }
+        setImages((prev) => [...prev, storedImage])
 
-    setImages((prev) => [...prev, ...newImages])
+        // Mark queue item as complete
+        updateQueueItem(queueItem.id, { status: 'complete' })
+        setQueueItems((prev) => prev.map(item =>
+          item.id === queueItem.id ? { ...item, status: 'complete' } : item
+        ))
 
-    for (let i = 0; i < newImages.length; i++) {
-      const img = newImages[i]
-      setProcessingStats({ current: i + 1, total: newImages.length })
-      setProcessingStatus((prev) => ({ ...prev, [img.id]: 'processing' }))
+        // Remove from queue after successful processing
+        setTimeout(() => {
+          removeFromQueue(queueItem.id)
+          setQueueItems((prev) => prev.filter(item => item.id !== queueItem.id))
+        }, 1000)
 
-      try {
-        const result = await currentAdapter.analyze(files[i], model)
-        updateImage(img.id, { result })
-        setImages((prev) => prev.map((p) => (p.id === img.id ? { ...p, result } : p)))
-        setProcessingStatus((prev) => ({ ...prev, [img.id]: 'complete' }))
       } catch (error) {
         console.error('Analysis error:', error)
-        setProcessingStatus((prev) => ({ ...prev, [img.id]: 'error' }))
-        setProcessingError(`Analysis failed for ${img.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        updateQueueItem(queueItem.id, {
+          status: 'error',
+          errorMessage
+        })
+        setQueueItems((prev) => prev.map(item =>
+          item.id === queueItem.id ? { ...item, status: 'error', errorMessage } : item
+        ))
+        setProcessingError(`Analysis failed for ${queueItem.filename}: ${errorMessage}`)
       }
     }
 
@@ -322,6 +393,32 @@ function App() {
     ? (processingStats.current / processingStats.total) * 100
     : 0
 
+  // Queue handlers
+  const handleToggleAutoProcess = () => {
+    const newValue = !autoProcess
+    setAutoProcess(newValue)
+    setAutoProcessQueue(newValue)
+  }
+
+  const handleClearQueue = () => {
+    clearQueue()
+    setQueueItems([])
+  }
+
+  const handleRemoveQueueItem = (id: string) => {
+    removeFromQueue(id)
+    setQueueItems((prev) => prev.filter(item => item.id !== id))
+  }
+
+  const handleRetryQueueItem = async (id: string) => {
+    updateQueueItem(id, { status: 'pending', errorMessage: undefined })
+    setQueueItems((prev) => prev.map(item =>
+      item.id === id ? { ...item, status: 'pending' as const, errorMessage: undefined } : item
+    ))
+  }
+
+  const queueStats = getQueueStats()
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* ===== TOP HEADER BAR (60px) ===== */}
@@ -364,6 +461,23 @@ function App() {
               title="AI Vision Analysis"
             >
               <Wand2 className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setView('queue')}
+              className={cn(
+                'w-10 h-10 rounded-lg flex items-center justify-center transition-all relative',
+                view === 'queue'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-card'
+              )}
+              title="Processing Queue"
+            >
+              <History className="h-5 w-5" />
+              {queueStats.total > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] flex items-center justify-center bg-purple-500 text-white rounded-full font-bold">
+                  {queueStats.total}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setView('library')}
@@ -430,6 +544,12 @@ function App() {
               <>
                 <Wand2 className="h-3 w-3 mr-2" />
                 Vision Analysis
+              </>
+            )}
+            {view === 'queue' && (
+              <>
+                <History className="h-3 w-3 mr-2" />
+                Processing Queue
               </>
             )}
             {view === 'library' && (
@@ -677,11 +797,16 @@ function App() {
                     {/* Auto Process */}
                     <div className="pt-3 border-t border-border">
                       <label className="flex items-center justify-between cursor-pointer">
-                        <span className="text-sm font-medium">Auto-process on drop</span>
-                        <input type="checkbox" className="rounded" defaultChecked />
+                        <span className="text-sm font-medium">Auto-process queue</span>
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={autoProcess}
+                          onChange={handleToggleAutoProcess}
+                        />
                       </label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Automatically analyze images when dropped
+                        Automatically process images as they're added to queue
                       </p>
                     </div>
                   </CardContent>
@@ -783,6 +908,184 @@ function App() {
               )}
             </div>
           )}
+
+            {view === 'queue' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Processing Queue</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {queueStats.pending} pending, {queueStats.processing} processing, {queueStats.error} failed
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {queueStats.pending > 0 && !autoProcess && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleProcessQueue}
+                        disabled={isProcessing}
+                        className="gap-2"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-4 w-4" />
+                            Process Queue ({queueStats.pending})
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {queueItems.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearQueue}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear Queue
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Auto-process setting */}
+                <Card>
+                  <CardContent className="p-4">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <span className="text-sm font-medium">Auto-process queue</span>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Automatically process images as they're added to queue
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={autoProcess}
+                        onChange={handleToggleAutoProcess}
+                        className="rounded"
+                      />
+                    </label>
+                  </CardContent>
+                </Card>
+
+                {/* Queue items grid */}
+                {queueItems.length > 0 ? (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                    {queueItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative aspect-square rounded-lg overflow-hidden bg-secondary"
+                        title={item.filename}
+                      >
+                        <img
+                          src={item.thumbnail}
+                          alt={item.filename}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+
+                        {/* Status badge */}
+                        <div className="absolute top-2 left-2">
+                          {item.status === 'pending' && (
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              Pending
+                            </Badge>
+                          )}
+                          {item.status === 'processing' && (
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            </Badge>
+                          )}
+                          {item.status === 'complete' && (
+                            <Badge variant="default" className="gap-1 text-xs bg-green-600">
+                              <Check className="h-3 w-3" />
+                            </Badge>
+                          )}
+                          {item.status === 'error' && (
+                            <Badge variant="destructive" className="gap-1 text-xs">
+                              <AlertCircle className="h-3 w-3" />
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Remove button */}
+                        <button
+                          onClick={() => handleRemoveQueueItem(item.id)}
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity hover:bg-destructive"
+                          title="Remove from queue"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+
+                        {/* Retry button for errors */}
+                        {item.status === 'error' && (
+                          <button
+                            onClick={() => handleRetryQueueItem(item.id)}
+                            className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors"
+                            title="Retry processing"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+
+                        {/* Filename overlay */}
+                        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent">
+                          <p className="text-xs font-medium text-white truncate drop-shadow-lg">
+                            {item.filename}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <History className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Queue is empty</p>
+                      <Button className="mt-4" onClick={() => setView('analyze')}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Images
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Processing progress */}
+                {isProcessing && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">Processing...</span>
+                          <span className="text-muted-foreground">
+                            {processingStats.current}/{processingStats.total}
+                          </span>
+                        </div>
+                        <Progress value={processingProgress} className="h-2" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Error message */}
+                {processingError && (
+                  <Card className="border-destructive">
+                    <CardContent className="p-4 flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-destructive">Error</p>
+                        <p className="text-sm text-muted-foreground mt-1">{processingError}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
 
             {view === 'library' && (
               <div className="space-y-6">
