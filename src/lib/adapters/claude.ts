@@ -50,40 +50,45 @@ export const claudeAdapter: VisionAdapter = {
       throw new Error('Invalid image format')
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: imageData.mediaType,
-                  data: imageData.data,
+    let response: Response
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1024,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: imageData.mediaType,
+                    data: imageData.data,
+                  },
                 },
-              },
-              {
-                type: 'text',
-                text: `Analyze this image and return JSON metadata:
+                {
+                  type: 'text',
+                  text: `Analyze this image and return JSON metadata:
 {"tags":["keyword1","keyword2"],"objects":[{"name":"object","confidence":0.9}],"colors":[{"hex":"#RRGGBB","name":"color","percentage":30}],"mood":"word","scene":"type","description":"description","suggestedTitle":"title"}
 
 Return only valid JSON.`,
-              },
-            ],
-          },
-        ],
-      }),
-    })
+                },
+              ],
+            },
+          ],
+        }),
+      })
+    } catch (error) {
+      throw new Error(`Network error - check your API key and internet connection: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}))

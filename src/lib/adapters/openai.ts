@@ -33,40 +33,45 @@ export const openaiAdapter: VisionAdapter = {
       imageUrl = image
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an image analysis assistant. Analyze any image provided and return structured JSON metadata. Always provide the requested JSON format regardless of image content.',
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analyze this image and extract metadata. Return JSON:
+    let response: Response
+    try {
+      response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an image analysis assistant. Analyze any image provided and return structured JSON metadata. Always provide the requested JSON format regardless of image content.',
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this image and extract metadata. Return JSON:
 {"tags":["keyword1","keyword2"],"objects":[{"name":"object","confidence":0.9}],"colors":[{"hex":"#RRGGBB","name":"color","percentage":30}],"mood":"word","scene":"type","description":"description","suggestedTitle":"title"}`,
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageUrl,
-                  detail: 'low',
                 },
-              },
-            ],
-          },
-        ],
-        max_tokens: 800,
-      }),
-    })
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageUrl,
+                    detail: 'low',
+                  },
+                },
+              ],
+            },
+          ],
+          max_tokens: 800,
+        }),
+      })
+    } catch (error) {
+      throw new Error(`Network error - check your API key and internet connection: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}))
