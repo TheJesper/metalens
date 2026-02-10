@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, Button } from '@/ui-lib'
-import { Camera, X, SwitchCamera, Upload } from 'lucide-react'
+import { Camera, X, SwitchCamera } from 'lucide-react'
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void

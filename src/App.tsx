@@ -53,7 +53,6 @@ import {
   getQueueStats,
   getAutoProcessQueue,
   setAutoProcessQueue,
-  getPendingQueueItems,
 } from './lib/queue'
 
 type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | 'error'>
