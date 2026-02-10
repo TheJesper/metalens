@@ -10,7 +10,7 @@ import {
   Input,
   Label,
   Badge,
-} from '@covers/ui'
+} from '@/ui-lib'
 import { ExternalLink, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { AdapterType, ADAPTERS } from '../lib/adapters'
 import {

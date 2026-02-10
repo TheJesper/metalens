@@ -4,7 +4,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@covers/ui'
+} from '@/ui-lib'
 import { ADAPTERS, ADAPTER_MODELS, AdapterType } from '../lib/adapters'
 
 interface AdapterSelectProps {

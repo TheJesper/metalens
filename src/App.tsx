@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Card, CardContent, Badge, Progress, Button, cn } from '@covers/ui'
+import { Card, CardContent, Badge, Progress, Button, cn } from '@/ui-lib'
 import {
   Scan,
   Upload,
@@ -22,6 +22,7 @@ import {
   Wand2,
   Check,
   X,
+  Camera,
 } from 'lucide-react'
 import { AdapterType, ADAPTER_MODELS, ADAPTERS, mockAdapter, ollamaAdapter, openaiAdapter, claudeAdapter, googleAdapter } from './lib/adapters'
 import { EngineSelector } from './components/EngineSelector'
@@ -29,6 +30,7 @@ import { ApiKeyDialog } from './components/ApiKeyDialog'
 import { ThumbnailGrid } from './components/ThumbnailGrid'
 import { CreateBatchDialog } from './components/CreateBatchDialog'
 import { ImageDetailPanel } from './components/ImageDetailPanel'
+import { CameraCapture } from './components/CameraCapture'
 import {
   StoredImage,
   getStoredImages,
@@ -142,6 +144,7 @@ function App() {
   // Dialogs
   const [apiKeyDialogAdapter, setApiKeyDialogAdapter] = useState<AdapterType | null>(null)
   const [showCreateBatch, setShowCreateBatch] = useState(false)
+  const [showCamera, setShowCamera] = useState(false)
   const [adapterRefreshTrigger, setAdapterRefreshTrigger] = useState(0)
 
   // Storage usage
@@ -595,6 +598,13 @@ function App() {
               title="Sketch → Mermaid"
             >
               <PenTool className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setShowCamera(true)}
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-all text-muted-foreground/60 hover:text-muted-foreground hover:bg-card"
+              title="Capture Photo"
+            >
+              <Camera className="h-5 w-5" />
             </button>
           </div>
 
@@ -1446,6 +1456,15 @@ function App() {
         imageCount={selectedIds.length}
         onCreateBatch={handleCreateBatch}
       />
+
+      {showCamera && (
+        <CameraCapture
+          onCapture={(file) => {
+            processImages([file])
+          }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
     </div>
   )
 }

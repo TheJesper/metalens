@@ -1,6 +1,7 @@
-import { Badge, cn } from '@covers/ui'
+import { Badge, cn } from '@/ui-lib'
 import { Check, AlertCircle, Loader2, X } from 'lucide-react'
 import { StoredImage } from '../lib/storage'
+import { ImageHoverMenu } from './ImageHoverMenu'
 
 interface ImageThumbnailProps {
   image: StoredImage
@@ -9,6 +10,9 @@ interface ImageThumbnailProps {
   selectionMode?: boolean
   onClick?: () => void
   onRemove?: () => void
+  onRescan?: () => void
+  onMove?: () => void
+  showHoverMenu?: boolean
 }
 
 export function ImageThumbnail({
@@ -18,6 +22,9 @@ export function ImageThumbnail({
   selectionMode = false,
   onClick,
   onRemove,
+  onRescan,
+  onMove,
+  showHoverMenu = false,
 }: ImageThumbnailProps) {
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -44,11 +51,20 @@ export function ImageThumbnail({
       {/* Hover Overlay */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
 
+      {/* Hover Menu (when enabled and not in selection mode) */}
+      {showHoverMenu && !selectionMode && (
+        <ImageHoverMenu
+          onRescan={onRescan}
+          onDiscard={onRemove}
+          onMove={onMove}
+        />
+      )}
+
       {/* Selection Checkbox */}
       {selectionMode && (
         <div
           className={cn(
-            'absolute top-2 left-2 w-5 h-5 rounded border-2 flex items-center justify-center transition-all',
+            'absolute top-2 left-2 w-5 h-5 rounded border-2 flex items-center justify-center transition-all z-10',
             selected
               ? 'bg-primary border-primary'
               : 'border-white/70 bg-black/30'
@@ -59,21 +75,23 @@ export function ImageThumbnail({
       )}
 
       {/* Status Badge */}
-      <div className="absolute top-2 right-2">
-        {status === 'processing' && (
-          <Badge variant="secondary" className="gap-1 text-xs">
-            <Loader2 className="h-3 w-3 animate-spin" />
-          </Badge>
-        )}
-        {status === 'error' && (
-          <Badge variant="destructive" className="gap-1 text-xs">
-            <AlertCircle className="h-3 w-3" />
-          </Badge>
-        )}
-      </div>
+      {!showHoverMenu && (
+        <div className="absolute top-2 right-2">
+          {status === 'processing' && (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <Loader2 className="h-3 w-3 animate-spin" />
+            </Badge>
+          )}
+          {status === 'error' && (
+            <Badge variant="destructive" className="gap-1 text-xs">
+              <AlertCircle className="h-3 w-3" />
+            </Badge>
+          )}
+        </div>
+      )}
 
-      {/* Remove Button (on hover) */}
-      {!selectionMode && onRemove && (
+      {/* Remove Button (on hover) - only when hover menu is disabled */}
+      {!selectionMode && !showHoverMenu && onRemove && (
         <button
           onClick={handleRemove}
           className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:scale-110 shadow-lg"

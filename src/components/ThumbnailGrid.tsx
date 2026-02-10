@@ -1,4 +1,4 @@
-import { Button } from '@covers/ui'
+import { Button } from '@/ui-lib'
 import { FolderPlus, X } from 'lucide-react'
 import { StoredImage } from '../lib/storage'
 import { ImageThumbnail } from './ImageThumbnail'

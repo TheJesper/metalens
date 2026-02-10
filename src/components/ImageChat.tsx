@@ -8,7 +8,7 @@ import {
   Input,
   Badge,
   cn,
-} from '@covers/ui'
+} from '@/ui-lib'
 import { Send, Loader2, MessageCircle, Sparkles } from 'lucide-react'
 import { StoredImage } from '../lib/storage'
 import { ChatMessage, AnalysisResult, VisionAdapter } from '../lib/adapters'

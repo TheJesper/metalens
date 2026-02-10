@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Badge, Input } from '@covers/ui'
+import { Button, Badge, Input } from '@/ui-lib'
 import {
   X,
   Copy,

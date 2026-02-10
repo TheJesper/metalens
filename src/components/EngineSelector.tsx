@@ -9,7 +9,7 @@ import {
   Button,
   Input,
   cn,
-} from '@covers/ui'
+} from '@/ui-lib'
 import { Check, AlertCircle, Loader2, Key, RefreshCw, Server, Globe } from 'lucide-react'
 import { ADAPTERS, ADAPTER_MODELS, AdapterType } from '../lib/adapters'
 import {

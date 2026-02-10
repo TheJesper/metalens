@@ -1,5 +1,5 @@
 import { X, Search } from 'lucide-react'
-import { cn } from '@covers/ui'
+import { cn } from '@/ui-lib'
 
 interface TagPillProps {
   tag: string

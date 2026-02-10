@@ -9,7 +9,7 @@ import {
   Button,
   Input,
   Label,
-} from '@covers/ui'
+} from '@/ui-lib'
 import { FolderPlus } from 'lucide-react'
 
 interface CreateBatchDialogProps {
