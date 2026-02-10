@@ -43,6 +43,9 @@ import {
 type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | 'error'>
 type View = 'analyze' | 'library' | 'batches' | 'sketch' | 'settings'
 
+// Version with Swedish timestamp
+const APP_VERSION = 'v1.0.0 (2026-02-10 11:15 CET)'
+
 // Helper component for explorer sidebar buttons
 function ExplorerButton({
   icon: Icon,
@@ -522,7 +525,7 @@ function App() {
           </div>
 
           <div className="bg-muted border-t border-border py-1.5 px-2 text-[10px] text-center text-muted-foreground">
-            v1.0.0
+            {APP_VERSION}
           </div>
         </div>
 
@@ -873,8 +876,14 @@ function App() {
           <span>{ADAPTERS[adapter].split(' ')[0]} engine</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <span>MetaLens v1.0.0</span>
-          <button className="hover:text-foreground">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`MetaLens ${APP_VERSION}`)
+            }}
+            className="hover:text-foreground flex items-center gap-1.5 transition-colors"
+            title="Click to copy version info"
+          >
+            <span>MetaLens {APP_VERSION}</span>
             <Info className="h-3 w-3" />
           </button>
         </div>
