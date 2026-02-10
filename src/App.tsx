@@ -33,6 +33,7 @@ import { CreateBatchDialog } from './components/CreateBatchDialog'
 import { ImageDetailPanel } from './components/ImageDetailPanel'
 import { CameraCapture } from './components/CameraCapture'
 import { FacesPage } from './pages/FacesPage'
+import { SketchPage } from './pages/SketchPage'
 import {
   StoredImage,
   getStoredImages,
@@ -1373,28 +1374,7 @@ function App() {
               </div>
             )}
 
-            {view === 'sketch' && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold">Sketch → Mermaid Diagram</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Draw flowcharts by hand, get Mermaid code instantly
-                  </p>
-                </div>
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <PenTool className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Coming Soon</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Sketch shapes → AI recognizes → Mermaid code
-                    </p>
-                    <Badge variant="secondary" className="mt-4">
-                      In Development
-                    </Badge>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            {view === 'sketch' && <SketchPage adapter={getAdapter()} model={model} />}
 
             {view === 'faces' && <FacesPage />}
 
