@@ -58,17 +58,17 @@
 - [x] META-123: Add tooltips to hover menu icons
 - [x] META-124: Make hover menu reusable for both Meta and Face pages
 
-**Phase 4: Facial Recognition (Priority 2)** ✓ FOUNDATION COMPLETE
+**Phase 4: Facial Recognition (Priority 2)** ✓ COMPLETE
 - [x] META-130: Integrate face detection via OpenAI Vision API (data models ready)
 - [x] META-131: Create Face data model and storage
 - [x] META-132: Create Person/bucket data model
-- [ ] META-133: Build Face Recognition page (/faces route) (deferred - UI implementation)
-- [ ] META-134: Create PersonBucket component (face group display) (deferred - UI implementation)
-- [ ] META-135: Build PersonBucketDetail view (all faces in bucket) (deferred - UI implementation)
-- [ ] META-136: Add "New face detected" assignment dialog (deferred - UI implementation)
-- [ ] META-137: Implement face → person assignment flow (deferred - UI implementation)
-- [ ] META-138: Add rescan/discard face data actions (deferred - UI implementation)
-- [ ] META-139: Implement move faces between buckets (deferred - UI implementation)
+- [x] META-133: Build Face Recognition page (/faces route)
+- [x] META-134: Create PersonBucket component (face group display)
+- [x] META-135: Build PersonBucketDetail view (all faces in bucket)
+- [x] META-136: Add "New face detected" assignment dialog
+- [x] META-137: Implement face → person assignment flow
+- [x] META-138: Add rescan/discard face data actions
+- [x] META-139: Implement move faces between buckets
 
 **Phase 5: Webcam Capture (Priority 3)** ✓ COMPLETE
 - [x] META-140: Create CameraCapture component
@@ -94,26 +94,26 @@
 - ~~[ ] META-067: Add per-image faces display~~
 - ~~[ ] META-068: Allow naming face groups~~
 
-### SPEC-META-004: Sketch to Mermaid
+### SPEC-META-004: Sketch to Mermaid ✓ COMPLETE
 > Spec: `docs/specs/features/sketch-to-mermaid/SPEC-META-004.md`
 
 - [x] META-070: Rename "Draw → Mermaid 2" to "Sketch → Mermaid Diagram"
 - [x] META-071: Add proper description subtitle
-- [ ] META-072: Implement canvas drawing component
-- [ ] META-073: Create Mermaid JSON schema for structured AI output
-- [ ] META-074: Implement AI recognition with structured JSON
-- [ ] META-075: Add Mermaid code display with copy button
-- [ ] META-076: Add live Mermaid preview renderer
-- [ ] META-077: Add clear canvas button
+- [x] META-072: Implement canvas drawing component
+- [x] META-073: Create Mermaid JSON schema for structured AI output
+- [x] META-074: Implement AI recognition with structured JSON
+- [x] META-075: Add Mermaid code display with copy button
+- [x] META-076: Add live Mermaid preview renderer
+- [x] META-077: Add clear canvas button
 
 ## Backlog
 
-- [ ] META-012: Export metadata to JSON file
-- [ ] META-020: EXIF data extraction
-- [ ] META-021: Batch folder display with expand/collapse
-- [ ] META-022: Batch context menu (rename/delete)
-- [ ] META-023: OpenAI/Claude/Google adapters
-- [ ] META-080: CoverKit consistency audit (buttons, spacing, colors, typography)
+- [x] META-012: Export metadata to JSON file
+- [ ] META-020: EXIF data extraction (future)
+- [x] META-021: Batch folder display with expand/collapse
+- [x] META-022: Batch context menu (rename/delete)
+- [x] META-023: OpenAI/Claude/Google adapters
+- [ ] META-080: CoverKit consistency audit (buttons, spacing, colors, typography) (future)
 
 ## Completed
 

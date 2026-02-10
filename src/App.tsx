@@ -559,8 +559,8 @@ function App() {
 
       {/* ===== MAIN AREA ===== */}
       <div className="flex-1 flex overflow-hidden">
-        {/* ===== ICON RAIL (48px) ===== */}
-        <div className="w-12 bg-background border-r border-border flex flex-col items-center py-2">
+        {/* ===== ICON RAIL (48px) - Hidden on mobile ===== */}
+        <div className="hidden md:flex w-12 bg-background border-r border-border flex-col items-center py-2">
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => setView('analyze')}
@@ -651,8 +651,8 @@ function App() {
           </div>
         </div>
 
-        {/* ===== EXPLORER PANEL (288px) ===== */}
-        <div className="w-72 bg-card border-r border-border flex flex-col">
+        {/* ===== EXPLORER PANEL (288px) - Hidden on mobile ===== */}
+        <div className="hidden lg:flex w-72 bg-card border-r border-border flex-col">
           <div className="h-8 bg-muted border-b border-border flex items-center px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             {view === 'analyze' && (
               <>
@@ -782,11 +782,11 @@ function App() {
             {view === 'settings' && 'Settings'}
           </div>
 
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
             {view === 'analyze' && (
               <div className="max-w-6xl mx-auto">
                 {/* Pro Layout: Compact drop zone + settings side-by-side */}
-                <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
                   {/* Left: Compact Drop Zone */}
                   <Card
                   className={cn(
@@ -1358,6 +1358,57 @@ function App() {
           onClose={() => setShowCamera(false)}
         />
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex items-center justify-around py-2 px-2 z-40">
+        <button
+          onClick={() => setView('analyze')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all',
+            view === 'analyze' ? 'bg-gold/20 text-gold' : 'text-muted-foreground'
+          )}
+        >
+          <Wand2 className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Analyze</span>
+        </button>
+        <button
+          onClick={() => setView('library')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all',
+            view === 'library' ? 'bg-blue-500/20 text-blue-400' : 'text-muted-foreground'
+          )}
+        >
+          <Images className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Library</span>
+        </button>
+        <button
+          onClick={() => setView('faces')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all',
+            view === 'faces' ? 'bg-pink-500/20 text-pink-400' : 'text-muted-foreground'
+          )}
+        >
+          <Users className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Faces</span>
+        </button>
+        <button
+          onClick={() => setShowCamera(true)}
+          className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-muted-foreground"
+        >
+          <Camera className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Camera</span>
+        </button>
+        <button
+          onClick={() => setView('settings')}
+          className={cn(
+            'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all',
+            view === 'settings' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+          )}
+        >
+          <Settings className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Settings</span>
+        </button>
+      </div>
     </div>
   )
 }
