@@ -44,7 +44,7 @@ type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | '
 type View = 'analyze' | 'library' | 'batches' | 'sketch' | 'settings'
 
 // Version with Swedish timestamp
-const APP_VERSION = 'v1.0.0 (2026-02-10 11:15 CET)'
+const APP_VERSION = 'v1.1.0 (2026-02-10 11:23 CET)'
 
 // Helper component for explorer sidebar buttons
 function ExplorerButton({
@@ -541,9 +541,11 @@ function App() {
 
           <div className="flex-1 overflow-auto p-6">
             {view === 'analyze' && (
-              <div className="space-y-6 max-w-4xl mx-auto">
-                {/* Main Drop Zone Card */}
-                <Card
+              <div className="max-w-6xl mx-auto">
+                {/* Pro Layout: Compact drop zone + settings side-by-side */}
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  {/* Left: Compact Drop Zone */}
+                  <Card
                   className={cn(
                     'relative border-2 border-dashed transition-all overflow-hidden',
                     isDragging
@@ -560,55 +562,39 @@ function App() {
                   }}
                   onDrop={handleDrop}
                 >
-                  <div className="p-8 text-center">
-                    {/* Icon */}
-                    <div className="mb-4">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center">
+                  <div className="p-6 text-center">
+                    {/* Compact Icon */}
+                    <div className="mb-3">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                         {isProcessing ? (
-                          <Loader2 className="h-8 w-8 text-gold animate-spin" />
+                          <Loader2 className="h-6 w-6 text-primary animate-spin" />
                         ) : (
-                          <Scan className="h-8 w-8 text-gold" />
+                          <Scan className="h-6 w-6 text-primary" />
                         )}
                       </div>
                     </div>
 
-                    {/* Title & Subtitle */}
-                    <h2 className="text-xl font-semibold mb-1">
-                      {isProcessing ? 'Analyzing...' : 'Drop images to analyze'}
-                    </h2>
-                    <p className="text-sm text-muted-foreground mb-6">
+                    {/* Compact Title */}
+                    <h3 className="text-base font-semibold mb-1">
+                      {isProcessing ? 'Processing...' : 'Drop Images'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-4">
                       {isProcessing
-                        ? `Processing ${processingStats.current} of ${processingStats.total} images`
-                        : 'AI extracts metadata, tags, colors, objects & more'}
+                        ? `${processingStats.current}/${processingStats.total} images`
+                        : 'Drag & drop or click to upload'}
                     </p>
 
-                    {/* Progress Bar (inside drop zone) */}
+                    {/* Compact Progress */}
                     {isProcessing && (
-                      <div className="max-w-xs mx-auto mb-6">
-                        <Progress value={processingProgress} className="h-2" />
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {Math.round(processingProgress)}% complete
+                      <div className="mb-4">
+                        <Progress value={processingProgress} className="h-1.5" />
+                        <p className="text-[10px] text-muted-foreground mt-1.5">
+                          {Math.round(processingProgress)}%
                         </p>
                       </div>
                     )}
 
-                    {/* Error Message */}
-                    {processingError && (
-                      <div className="max-w-md mx-auto mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                        <span>{processingError}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="ml-auto h-6 px-2"
-                          onClick={() => setProcessingError(null)}
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* File Input Button */}
+                    {/* Compact File Button */}
                     {!isProcessing && (
                       <>
                         <input
@@ -621,112 +607,180 @@ function App() {
                         />
                         <Button
                           variant="default"
-                          size="lg"
+                          size="sm"
                           onClick={() => fileInputRef.current?.click()}
-                          className="mb-4"
+                          className="w-full"
                         >
-                          <Upload className="h-5 w-5 mr-2" />
+                          <Upload className="h-4 w-4 mr-2" />
                           Choose Files
                         </Button>
-                        <p className="text-xs text-muted-foreground">
-                          JPG, PNG, WebP, GIF, HEIC, AVIF, SVG, or ZIP
+                        <p className="text-[10px] text-muted-foreground mt-2">
+                          JPG, PNG, WebP, GIF, HEIC
                         </p>
                       </>
                     )}
                   </div>
-
-                  {/* Recent Images Strip (inside card) */}
-                  {images.length > 0 && !isProcessing && (
-                    <div className="border-t border-border bg-muted/30 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium">
-                          Recent ({images.length})
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {hasResults && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleReanalyze}
-                              className="h-7 text-xs gap-1"
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                              Re-analyze
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleClearAll}
-                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Clear
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {images.slice(0, 8).map((img) => (
-                          <button
-                            key={img.id}
-                            onClick={() => setSelectedImage(img)}
-                            className={cn(
-                              'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
-                              selectedImage?.id === img.id
-                                ? 'border-gold'
-                                : 'border-transparent hover:border-muted-foreground/50'
-                            )}
-                          >
-                            <img
-                              src={img.thumbnail}
-                              alt={img.filename}
-                              className="w-full h-full object-cover"
-                            />
-                            {getImageStatus(img.id) === 'processing' && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <Loader2 className="h-4 w-4 text-white animate-spin" />
-                              </div>
-                            )}
-                            {getImageStatus(img.id) === 'error' && (
-                              <div className="absolute inset-0 bg-destructive/50 flex items-center justify-center">
-                                <AlertCircle className="h-4 w-4 text-white" />
-                              </div>
-                            )}
-                            {img.result && getImageStatus(img.id) !== 'processing' && (
-                              <div className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-500 border border-background" />
-                            )}
-                          </button>
-                        ))}
-                        {images.length > 8 && (
-                          <button
-                            onClick={() => setView('library')}
-                            className="flex-shrink-0 w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground hover:bg-muted-foreground/20"
-                          >
-                            +{images.length - 8}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </Card>
 
-                {/* Engine Selector (collapsible/secondary) */}
+                {/* Right: Settings Panel */}
                 <Card>
-                  <CardContent className="pt-6">
-                    <EngineSelector
-                      adapter={adapter}
-                      model={model}
-                      onAdapterChange={handleAdapterChange}
-                      onModelChange={handleModelChange}
-                      onConfigureKey={setApiKeyDialogAdapter}
-                      hasResults={false}
-                      isProcessing={isProcessing}
-                      refreshTrigger={adapterRefreshTrigger}
-                    />
+                  <CardContent className="p-4 space-y-4">
+                    {/* Engine Selector */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        AI Engine
+                      </h4>
+                      <EngineSelector
+                        adapter={adapter}
+                        model={model}
+                        onAdapterChange={handleAdapterChange}
+                        onModelChange={handleModelChange}
+                        onConfigureKey={setApiKeyDialogAdapter}
+                        hasResults={false}
+                        isProcessing={isProcessing}
+                        refreshTrigger={adapterRefreshTrigger}
+                      />
+                    </div>
+
+                    {/* Extraction Options */}
+                    <div className="space-y-2 pt-3 border-t border-border">
+                      <h4 className="text-sm font-semibold">Extraction Options</h4>
+                      <div className="space-y-2 text-sm">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" className="rounded" defaultChecked />
+                          <span>Tags & Keywords</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" className="rounded" defaultChecked />
+                          <span>Colors & Palette</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" className="rounded" defaultChecked />
+                          <span>Objects & Scene</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" className="rounded" />
+                          <span>Faces & People</span>
+                          <Badge variant="secondary" className="ml-auto text-[10px]">Pro</Badge>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" className="rounded" />
+                          <span>Text & OCR</span>
+                          <Badge variant="secondary" className="ml-auto text-[10px]">Pro</Badge>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Auto Process */}
+                    <div className="pt-3 border-t border-border">
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-sm font-medium">Auto-process on drop</span>
+                        <input type="checkbox" className="rounded" defaultChecked />
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Automatically analyze images when dropped
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
-            )}
+
+              {/* Error Message - Full Width Below */}
+              {processingError && (
+                <div className="max-w-6xl mx-auto mb-4">
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>{processingError}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-auto h-6 px-2"
+                      onClick={() => setProcessingError(null)}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Images - Full Width Below */}
+              {images.length > 0 && !isProcessing && (
+                <Card className="max-w-6xl mx-auto">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-semibold">
+                        Recent ({images.length})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {hasResults && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleReanalyze}
+                            className="h-7 text-xs gap-1"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Re-analyze
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearAll}
+                          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {images.slice(0, 12).map((img) => (
+                        <button
+                          key={img.id}
+                          onClick={() => setSelectedImage(img)}
+                          className={cn(
+                            'relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all',
+                            selectedImage?.id === img.id
+                              ? 'border-primary ring-2 ring-primary/20'
+                              : 'border-transparent hover:border-muted-foreground/50'
+                          )}
+                        >
+                          <img
+                            src={img.thumbnail}
+                            alt={img.filename}
+                            className="w-full h-full object-cover"
+                          />
+                          {getImageStatus(img.id) === 'processing' && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <Loader2 className="h-4 w-4 text-white animate-spin" />
+                            </div>
+                          )}
+                          {getImageStatus(img.id) === 'error' && (
+                            <div className="absolute inset-0 bg-destructive/50 flex items-center justify-center">
+                              <AlertCircle className="h-4 w-4 text-white" />
+                            </div>
+                          )}
+                          {img.result && getImageStatus(img.id) !== 'processing' && (
+                            <div className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-green-500 border border-background" />
+                          )}
+                        </button>
+                      ))}
+                      {images.length > 12 && (
+                        <button
+                          onClick={() => setView('library')}
+                          className="flex-shrink-0 w-20 h-20 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground hover:bg-muted-foreground/20"
+                        >
+                          +{images.length - 12}
+                        </button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
             {view === 'library' && (
               <div className="space-y-6">

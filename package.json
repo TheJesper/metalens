@@ -1,6 +1,6 @@
 {
   "name": "metalens",
-  "version": "1.0.0-20260210.1115",
+  "version": "1.1.0-20260210.1123",
   "description": "AI-powered image metadata extraction - See into your images' soul",
   "type": "module",
   "scripts": {
