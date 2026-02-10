@@ -68,7 +68,7 @@ import {
 } from './lib/queue'
 
 type ProcessingStatus = Record<string, 'pending' | 'processing' | 'complete' | 'error'>
-type View = 'analyze' | 'queue' | 'library' | 'batches' | 'faces' | 'sketch' | 'settings'
+type View = 'analyze' | 'library' | 'batches' | 'faces' | 'sketch' | 'settings'
 
 // Version with Swedish timestamp
 const APP_VERSION = 'v1.1.0 (2026-02-10 11:23 CET)'
@@ -287,11 +287,8 @@ function App() {
       }
     }
 
-    // Switch to queue view if not auto-processing
-    if (!autoProcess) {
-      setView('queue')
-    } else if (newItems.length > 0) {
-      // Trigger auto-processing
+    // Auto-process if enabled
+    if (autoProcess && newItems.length > 0) {
       setTimeout(() => handleProcessQueue(), 100)
     }
   }
@@ -578,23 +575,6 @@ function App() {
               <Wand2 className="h-5 w-5" />
             </button>
             <button
-              onClick={() => setView('queue')}
-              className={cn(
-                'w-10 h-10 rounded-lg flex items-center justify-center transition-all relative',
-                view === 'queue'
-                  ? 'bg-purple-500/20 text-purple-400'
-                  : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-card'
-              )}
-              title="Processing Queue"
-            >
-              <History className="h-5 w-5" />
-              {queueStats.total > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] flex items-center justify-center bg-purple-500 text-white rounded-full font-bold">
-                  {queueStats.total}
-                </span>
-              )}
-            </button>
-            <button
               onClick={() => setView('library')}
               className={cn(
                 'w-10 h-10 rounded-lg flex items-center justify-center transition-all',
@@ -678,12 +658,6 @@ function App() {
               <>
                 <Wand2 className="h-3 w-3 mr-2" />
                 Vision Analysis
-              </>
-            )}
-            {view === 'queue' && (
-              <>
-                <History className="h-3 w-3 mr-2" />
-                Processing Queue
               </>
             )}
             {view === 'library' && (
@@ -801,7 +775,6 @@ function App() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="h-8 bg-muted border-b border-border flex items-center px-3 text-xs font-semibold text-muted-foreground">
             {view === 'analyze' && 'AI Vision Analysis'}
-            {view === 'queue' && 'Processing Queue'}
             {view === 'library' && `${images.length} Images`}
             {view === 'batches' && 'Batches'}
             {view === 'faces' && 'Face Recognition'}
@@ -1054,157 +1027,46 @@ function App() {
                   </CardContent>
                 </Card>
               )}
-            </div>
-          )}
-
-            {view === 'queue' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold">Processing Queue</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {queueStats.pending} pending, {queueStats.processing} processing, {queueStats.error} failed
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!selectionMode && queueStats.pending > 0 && !autoProcess && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleProcessQueue}
-                        disabled={isProcessing}
-                        className="gap-2"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
+                {/* Processing Queue */}
+                {queueItems.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-base font-semibold">Processing Queue</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {queueStats.pending} pending, {queueStats.processing} processing, {queueStats.error} failed
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {queueStats.pending > 0 && !autoProcess && !isProcessing && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleProcessQueue}
+                            className="gap-2"
+                          >
                             <Wand2 className="h-4 w-4" />
-                            Process Queue ({queueStats.pending})
-                          </>
+                            Process ({queueStats.pending})
+                          </Button>
                         )}
-                      </Button>
-                    )}
-                    {!selectionMode && queueItems.length > 0 && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectionMode(true)}
-                        >
-                          Select
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={handleClearQueue}
-                          className="text-muted-foreground hover:text-foreground"
+                          className="text-xs"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Clear Queue
+                          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                          Clear
                         </Button>
-                      </>
-                    )}
-                    {selectionMode && (
-                      <>
-                        <span className="text-sm text-muted-foreground">
-                          {selectedIds.length} selected
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectAll}
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectNone}
-                        >
-                          Select None
-                        </Button>
-                        {selectedIds.length > 0 && (
-                          <>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={handleBatchProcess}
-                              className="gap-2"
-                            >
-                              <Wand2 className="h-4 w-4" />
-                              Process ({selectedIds.length})
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={handleBatchDelete}
-                              className="gap-2"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete ({selectedIds.length})
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectionMode(false)
-                            setSelectedIds([])
-                          }}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Cancel
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Auto-process setting */}
-                <Card>
-                  <CardContent className="p-4">
-                    <label className="flex items-center justify-between cursor-pointer">
-                      <div>
-                        <span className="text-sm font-medium">Auto-process queue</span>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Automatically process images as they're added to queue
-                        </p>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={autoProcess}
-                        onChange={handleToggleAutoProcess}
-                        className="rounded"
-                      />
-                    </label>
-                  </CardContent>
-                </Card>
+                    </div>
 
-                {/* Queue items grid */}
-                {queueItems.length > 0 ? (
-                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                    {queueItems.map((item) => {
-                      const isSelected = selectedIds.includes(item.id)
-                      return (
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                      {queueItems.map((item) => (
                         <div
                           key={item.id}
-                          className={cn(
-                            'relative aspect-square rounded-lg overflow-hidden bg-secondary cursor-pointer transition-all',
-                            isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
-                            selectionMode && 'hover:ring-2 hover:ring-primary/50'
-                          )}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-secondary"
                           title={item.filename}
-                          onClick={(e) => {
-                            if (selectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
-                              if (!selectionMode) setSelectionMode(true)
-                              handleSelectToggle(item.id, e)
-                            }
-                          }}
                         >
                           <img
                             src={item.thumbnail}
@@ -1212,125 +1074,85 @@ function App() {
                             className="absolute inset-0 w-full h-full object-cover"
                           />
 
-                          {/* Selection Checkbox */}
-                          {selectionMode && (
-                            <div
-                              className={cn(
-                                'absolute top-2 left-2 w-5 h-5 rounded border-2 flex items-center justify-center transition-all z-10',
-                                isSelected
-                                  ? 'bg-primary border-primary'
-                                  : 'border-white/70 bg-black/30'
-                              )}
-                            >
-                              {isSelected && <Check className="h-3 w-3 text-white" />}
-                            </div>
-                          )}
-
                           {/* Status badge */}
-                          {!selectionMode && (
-                            <div className="absolute top-2 left-2">
-                              {item.status === 'pending' && (
-                                <Badge variant="secondary" className="gap-1 text-xs">
-                                  Pending
-                                </Badge>
-                              )}
-                              {item.status === 'processing' && (
-                                <Badge variant="secondary" className="gap-1 text-xs">
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                </Badge>
-                              )}
-                              {item.status === 'complete' && (
-                                <Badge variant="default" className="gap-1 text-xs bg-green-600">
-                                  <Check className="h-3 w-3" />
-                                </Badge>
-                              )}
-                              {item.status === 'error' && (
-                                <Badge variant="destructive" className="gap-1 text-xs">
-                                  <AlertCircle className="h-3 w-3" />
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Remove button */}
-                          {!selectionMode && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRemoveQueueItem(item.id)
-                              }}
-                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity hover:bg-destructive"
-                              title="Remove from queue"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
-                          {/* Retry button for errors */}
-                          {!selectionMode && item.status === 'error' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRetryQueueItem(item.id)
-                              }}
-                              className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-white hover:bg-primary/80 transition-colors"
-                              title="Retry processing"
-                            >
-                              <RefreshCw className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
-                          {/* Filename overlay */}
-                          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent">
-                            <p className="text-xs font-medium text-white truncate drop-shadow-lg">
-                              {item.filename}
-                            </p>
+                          <div className="absolute top-1.5 left-1.5">
+                            {item.status === 'processing' && (
+                              <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0.5">
+                                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                              </Badge>
+                            )}
+                            {item.status === 'error' && (
+                              <Badge variant="destructive" className="gap-1 text-[10px] px-1.5 py-0.5">
+                                <AlertCircle className="h-2.5 w-2.5" />
+                              </Badge>
+                            )}
                           </div>
+
+                          {/* Remove/Retry button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (item.status === 'error') {
+                                handleRetryQueueItem(item.id)
+                              } else {
+                                handleRemoveQueueItem(item.id)
+                              }
+                            }}
+                            className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity"
+                            title={item.status === 'error' ? 'Retry' : 'Remove'}
+                          >
+                            {item.status === 'error' ? (
+                              <RefreshCw className="h-3 w-3" />
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                          </button>
                         </div>
-                      )
-                    })}
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <History className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">Queue is empty</p>
-                      <Button className="mt-4" onClick={() => setView('analyze')}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Images
+                )}
+
+                {/* Recent Library */}
+                {images.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-semibold">Recent Library</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setView('library')}
+                        className="text-xs"
+                      >
+                        View All ({images.length})
                       </Button>
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
 
-                {/* Processing progress */}
-                {isProcessing && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">Processing...</span>
-                          <span className="text-muted-foreground">
-                            {processingStats.current}/{processingStats.total}
-                          </span>
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                      {images.slice(0, 12).map((img) => (
+                        <div
+                          key={img.id}
+                          onClick={() => setSelectedImage(img)}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-secondary cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                          title={img.filename}
+                        >
+                          <img
+                            src={img.thumbnail}
+                            alt={img.filename}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
                         </div>
-                        <Progress value={processingProgress} className="h-2" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Error message */}
-                {processingError && (
-                  <Card className="border-destructive">
-                    <CardContent className="p-4 flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-destructive">Error</p>
-                        <p className="text-sm text-muted-foreground mt-1">{processingError}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      ))}
+                      {images.length > 12 && (
+                        <button
+                          onClick={() => setView('library')}
+                          className="aspect-square rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground hover:bg-muted-foreground/20"
+                        >
+                          +{images.length - 12}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
